@@ -1,0 +1,51 @@
+query Tours {
+  __typename
+  tours {
+    __typename
+    meta {
+      pagination {
+        total
+        pageCount
+        page
+        pageCount
+        pageSize
+      }
+    }
+    data {
+      id
+      attributes {
+        name
+        location
+        participant
+        price
+        image {
+          data {
+            id
+            attributes {
+              name
+              height
+              width
+              formats
+            }
+          }
+        }
+        imagePreview {
+          data {
+            id
+            attributes {
+              alternativeText
+              caption
+              url
+              height
+              width
+            }
+          }
+        }
+        duration
+        createdAt
+        updatedAt
+        publishedAt
+      }
+    }
+  }
+}
