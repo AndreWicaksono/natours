@@ -1,17 +1,23 @@
-import React, { HTMLAttributes } from "react";
+import React, { HTMLAttributes, useState } from "react";
+import useEventListener from "utils/Hooks/useEventListener";
 
-import NavigationBarBase from "./NavigationBar.css";
+import {
+  NavigationBarBaseSolid,
+  NavigationBarBaseTransparent,
+} from "./NavigationBar.css";
 
 interface INavigationBarProps extends HTMLAttributes<HTMLDivElement> {
   navRight?: React.ReactElement;
 }
 
 const NavigationBar: React.FC<INavigationBarProps> = ({
-  className = "px-12",
+  className = "px-6 lg:px-12",
   navRight,
 }) => {
-  return (
-    <NavigationBarBase className={className}>
+  const [modeTransparent, setModeTransparent] = useState<boolean>(true);
+
+  const content: React.ReactElement = (
+    <React.Fragment>
       <div className="inline-block">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -23,7 +29,30 @@ const NavigationBar: React.FC<INavigationBarProps> = ({
       </div>
 
       {navRight && navRight}
-    </NavigationBarBase>
+    </React.Fragment>
+  );
+
+  const onScroll = (event: Event) => {
+    if (window.scrollY > 200) {
+      setModeTransparent(false);
+    } else {
+      setModeTransparent(true);
+    }
+  };
+
+  useEventListener("scroll", onScroll);
+
+  if (!modeTransparent)
+    return (
+      <NavigationBarBaseSolid className={className}>
+        {content}
+      </NavigationBarBaseSolid>
+    );
+
+  return (
+    <NavigationBarBaseTransparent className={className}>
+      {content}
+    </NavigationBarBaseTransparent>
   );
 };
 
