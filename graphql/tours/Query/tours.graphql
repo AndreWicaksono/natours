@@ -1,6 +1,5 @@
-query Tours {
-  __typename
-  tours {
+query Tours($limit: Int = 10, $start: Int = 0) {
+  tours(pagination: { limit: $limit, start: $start }) {
     __typename
     meta {
       pagination {
@@ -14,10 +13,7 @@ query Tours {
     data {
       id
       attributes {
-        name
-        location
-        participant
-        price
+        duration
         image {
           data {
             id
@@ -41,7 +37,11 @@ query Tours {
             }
           }
         }
-        duration
+        minimumParticipant
+        maximumParticipant
+        name
+        price
+        slug
         createdAt
         updatedAt
         publishedAt
