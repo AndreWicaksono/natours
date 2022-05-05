@@ -5,6 +5,12 @@ module.exports = {
   ],
   important: true,
   theme: {
+    container: {
+      screens: {
+        'xl': "1208px",
+        '2xl': "1208px"
+      }
+    },
     extend: {},
   },
   plugins: [],

@@ -1,11 +1,15 @@
-import React from "react";
+import React, { HTMLAttributes } from "react";
 import Image from "next/image";
 
 import HeroBase, { Button } from "./Hero.css";
 
-const Hero: React.FC<{ srcImage: string }> = ({ srcImage }) => {
+interface IHeroProps extends HTMLAttributes<HTMLHeadElement> {
+  srcImage: string;
+}
+
+const Hero: React.FC<IHeroProps> = ({ className, srcImage }) => {
   return (
-    <HeroBase>
+    <HeroBase className={className}>
       <Image
         alt="Natours Hero's Image"
         layout="fill"
