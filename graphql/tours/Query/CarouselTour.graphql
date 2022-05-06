@@ -1,7 +1,7 @@
 #import "./Fragments/TourMetaParts.graphql"
 #import "./Fragments/TourPreviewParts.graphql"
 
-query Tours(
+query CarouselTours(
   $filters: TourFiltersInput
   $pagination: PaginationArg
   $publicationState: PublicationState
@@ -18,23 +18,7 @@ query Tours(
     data {
       id
       attributes {
-        createdAt
-        publishedAt
-        updatedAt
         ...TourPreviewParts
-        image {
-          data {
-            id
-            attributes {
-              name
-              height
-              width
-              formats
-            }
-          }
-        }
-        minimumParticipant
-        maximumParticipant
       }
     }
   }

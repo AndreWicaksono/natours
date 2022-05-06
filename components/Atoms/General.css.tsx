@@ -44,3 +44,30 @@ export const ButtonTransparent = styled.button<{ color?: string }>`
     text-shadow: 0 0.7rem 1rem black;
   }
 `;
+
+export const LoadingBar = styled.div<{
+  hexColorTheme?: string;
+  rgbaColorTheme?: string;
+  height?: string;
+  width?: string;
+}>`
+  ${({
+    hexColorTheme = "#f5f5f5",
+    rgbaColorTheme = "rgba(231, 231, 231, 0.65)",
+    height = "24px",
+    width = "100%",
+  }) => {
+    return css`
+      height: ${height};
+      width: ${width};
+
+      animation: shimmer 1.4s infinite linear;
+      background-image: linear-gradient(
+        90deg,
+        ${hexColorTheme} 0px,
+        ${rgbaColorTheme} 40px,
+        ${hexColorTheme} 80px
+      );
+    `;
+  }}
+`;

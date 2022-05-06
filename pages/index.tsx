@@ -8,7 +8,10 @@ import SectionTourPreview from "components/Organisms/Section/Home/SectionTourPre
 const Home: NextPage = () => {
   return (
     <React.Fragment>
-      <Hero className="mb-6 lg:mb-8" srcImage="/Images/hero.webp" />
+      <Hero
+        className="mb-6 lg:mb-8"
+        srcImage="/Images/tom-bixler-cSkl8pQ33mI-unsplash.webp"
+      />
       <SectionTourPreview className="pb-6" />
       <Footer />
     </React.Fragment>

@@ -49,6 +49,13 @@ const CarouselTourBase = styled.div`
   .swiper-pagination-bullet-active {
     background: #55c57a;
   }
+
+  .swiper-slide {
+    height: auto;
+
+    display: flex;
+    flex-grow: 1;
+  }
 `;
 
 export default CarouselTourBase;

@@ -1,0 +1,10 @@
+fragment TourMetaParts on TourEntityResponseCollection {
+  meta {
+    pagination {
+      page
+      pageCount
+      pageSize
+      total
+    }
+  }
+}

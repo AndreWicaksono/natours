@@ -1,12 +1,10 @@
-import React, { HTMLAttributes, useState } from "react";
-
-import CardTour from "components/Organisms/Card/CardTour/CardTour";
+import React, { HTMLAttributes, ReactNode, useState } from "react";
 
 import useWindowSize from "utils/Hooks/useWindowSize";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/solid";
 import { Pagination, Navigation } from "swiper";
-import { Swiper, SwiperSlide, useSwiper } from "swiper/react";
+import { Swiper, useSwiper } from "swiper/react";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -17,8 +15,15 @@ import CarouselTourBase, {
   CustomButtonPrevious,
 } from "./CarouselTour.css";
 
-const CarouselTour: React.FC<HTMLAttributes<HTMLDivElement>> = ({
+interface ICarouselTourProps extends HTMLAttributes<HTMLDivElement> {
+  loading?: boolean;
+  slides: ReactNode;
+}
+
+const CarouselTour: React.FC<ICarouselTourProps> = ({
   className,
+  loading,
+  slides,
 }) => {
   const [showButton, setShowButton] = useState<{
     previous: boolean;
@@ -31,7 +36,7 @@ const CarouselTour: React.FC<HTMLAttributes<HTMLDivElement>> = ({
   return (
     <CarouselTourBase
       className={className}
-      onMouseOver={() => width >= 1024 && setHovered(true)}
+      onMouseOver={() => !loading && width >= 1024 && setHovered(true)}
       onMouseLeave={() => width >= 1024 && setHovered(false)}
     >
       <Swiper
@@ -50,78 +55,7 @@ const CarouselTour: React.FC<HTMLAttributes<HTMLDivElement>> = ({
           1208: { slidesPerGroup: 4, slidesPerView: 4, touchRatio: 0 },
         }}
       >
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
-        <SwiperSlide>
-          <CardTour
-            duration={1}
-            location="Sleman, Daerah Istimewa Yogyakarta"
-            name="Yogya Istimewa"
-            price="Rp300.000"
-          />
-        </SwiperSlide>
+        {slides}
 
         {hovered && (
           <React.Fragment>

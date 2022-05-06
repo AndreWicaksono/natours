@@ -1,7 +1,16 @@
 import React, { HTMLAttributes } from "react";
 import Image from "next/image";
 
-import CardTourBase, { CardDetails, CardFooter } from "./CardTour.css";
+import CardTourBase, {
+  CardDetails,
+  CardFooter,
+  CardHeader,
+  CardPicture,
+  CardTourBaseLoading,
+  HeadingTertirary,
+} from "./CardTour.css";
+import { LoadingBar } from "components/Atoms/General.css";
+
 import {
   ClockIcon,
   LocationMarkerIcon,
@@ -9,26 +18,48 @@ import {
 } from "@heroicons/react/outline";
 
 interface ICardTourProps extends HTMLAttributes<HTMLDivElement> {
-  duration: number;
+  duration: number | null | undefined;
+  loading?: boolean;
   location: string;
-  name: string;
-  photoPreview?: string;
+  name: string | undefined;
+  photoPreview?: string | null;
   price: string;
   rating?: number;
 }
 
 const CardTour: React.FC<ICardTourProps> = ({
   duration,
+  loading = true,
   location,
   name,
   photoPreview,
   price,
   rating,
 }) => {
+  if (loading) {
+    return (
+      <CardTourBaseLoading>
+        <CardPicture>
+          <LoadingBar height="100%" width="100%" />
+        </CardPicture>
+
+        <CardDetails>
+          <LoadingBar height="24px" width="100%" />
+          <LoadingBar height="24px" width="100%" />
+        </CardDetails>
+
+        <CardFooter>
+          <LoadingBar height="24px" width="100%" />
+          <LoadingBar height="24px" width="100%" />
+        </CardFooter>
+      </CardTourBaseLoading>
+    );
+  }
+
   return (
     <CardTourBase>
-      <div className="card__header">
-        <div className="card__picture">
+      <CardHeader>
+        <CardPicture>
           <div className="card__picture-overlay">&nbsp;</div>
           <Image
             alt="The Sea Explorer"
@@ -41,11 +72,12 @@ const CardTour: React.FC<ICardTourProps> = ({
                 : "https://placeimg.com/330/220/nature"
             }
           />
-        </div>
-        <h3 className="heading-tertirary">
+        </CardPicture>
+
+        <HeadingTertirary>
           <span>{name}</span>
-        </h3>
-      </div>
+        </HeadingTertirary>
+      </CardHeader>
 
       <CardDetails>
         {/* <h4 className="card__sub-heading">medium 7-day tour</h4> */}
@@ -65,7 +97,7 @@ const CardTour: React.FC<ICardTourProps> = ({
       <CardFooter>
         <p>
           <span className="card__footer-value">{price}</span>{" "}
-          <span className="card__footer-text">per person</span>
+          <span className="card__footer-text">/ person</span>
         </p>
         {rating && (
           <p className="card__ratings flex">
