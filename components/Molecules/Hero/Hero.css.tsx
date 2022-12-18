@@ -30,14 +30,14 @@ export const Button = styled.button`
 const HeroBase = styled.header`
   position: relative;
 
-  height: 40vh;
+  height: 30vh;
 
   @media only screen and (min-width: 1024px) {
     height: 50vh;
   }
 
   @media only screen and (min-width: 1280px) {
-    height: 65vh;
+    height: 50vh;
   }
 
   .heading-primary {

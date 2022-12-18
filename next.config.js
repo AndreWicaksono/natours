@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: { domains: ["localhost", "placeimg.com"] },
   reactStrictMode: true,
   webpack: (config, { webpack, buildId, isServer }) => {
     config.module.rules.push({

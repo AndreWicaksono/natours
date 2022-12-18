@@ -1,0 +1,20 @@
+fragment TourPreviewParts on Tour {
+  city
+  duration
+  imagePreview {
+    data {
+      id
+      attributes {
+        alternativeText
+        caption
+        url
+        height
+        width
+      }
+    }
+  }
+  name
+  price
+  province
+  slug
+}

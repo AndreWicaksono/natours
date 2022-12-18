@@ -10,19 +10,20 @@
     "generate:graphql": "graphql-codegen"
   },
   "dependencies": {
-    "@apollo/client": "^3.6.1",
+    "@apollo/client": "^3.6.2",
     "@emotion/react": "^11.9.0",
     "@emotion/styled": "^11.8.1",
     "@graphql-codegen/cli": "^2.6.2",
-    "@graphql-codegen/typed-document-node": "^2.2.8",
-    "@graphql-codegen/typescript": "^2.4.8",
-    "@graphql-codegen/typescript-operations": "^2.3.5",
+    "@graphql-codegen/typed-document-node": "^2.2.9",
+    "@graphql-codegen/typescript": "^2.4.9",
+    "@graphql-codegen/typescript-operations": "^2.3.6",
     "@headlessui/react": "^1.6.0",
     "@heroicons/react": "^1.0.6",
     "graphql": "^16.4.0",
     "next": "^12.1.5",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "swiper": "^8.1.4"
   },
   "devDependencies": {
     "@types/node": "17.0.30",
