@@ -34,7 +34,6 @@ const MobilePhotoGallery: React.FC<IMobilePhotoGalleryProps> = ({
           <SwiperSlide key={image.id}>
             <Image
               alt="Tour Preview Image"
-              className="rounded"
               key={image.id}
               layout="fill"
               objectFit="cover"

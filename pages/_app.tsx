@@ -11,7 +11,7 @@ import "../styles/globals.css";
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ApolloProvider client={client}>
-      <NavigationBar navRight={<NavMenuAuth />} />
+      <NavigationBar navRight={<NavMenuAuth />} pathnameTransparentMode={["/"]} />
       <Component {...pageProps} />
     </ApolloProvider>
   );

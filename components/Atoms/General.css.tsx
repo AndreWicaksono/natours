@@ -6,7 +6,7 @@ export const ButtonDarkPills = styled.button<{
   color?: string;
 }>`
   border: 1px solid rgb(247, 247, 247);
-  border-radius: 6rem;
+  border-radius: .125rem;
   padding: 0.5rem 2rem;
   transition: all 0.2s;
 

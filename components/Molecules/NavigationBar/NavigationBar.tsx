@@ -1,4 +1,6 @@
-import React, { HTMLAttributes, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import React, { HTMLAttributes, useEffect, useState } from "react";
 import useEventListener from "utils/Hooks/useEventListener";
 
 import {
@@ -8,24 +10,34 @@ import {
 
 interface INavigationBarProps extends HTMLAttributes<HTMLDivElement> {
   navRight?: React.ReactElement;
+  pathnameTransparentMode?: Array<string>;
 }
 
 const NavigationBar: React.FC<INavigationBarProps> = ({
-  className = "px-6 lg:px-12",
+  className = "px-4 lg:px-12",
   navRight,
+  pathnameTransparentMode = [],
 }) => {
   const [modeTransparent, setModeTransparent] = useState<boolean>(true);
+
+  const { pathname } = useRouter();
+
+  const isCurrentPageNeedTransparentMode =
+    pathnameTransparentMode.includes(pathname);
 
   const content: React.ReactElement = (
     <React.Fragment>
       <div className="inline-block">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          alt="Natours Logo White"
-          height={35}
-          width={68.25}
-          src="/PNG/Logo/natours-logo-white.png"
-        />
+        <Link href="/" passHref>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt="Natours Logo White"
+            className="cursor-pointer"
+            src="/PNG/Logo/natours-logo-white.png"
+            height={25}
+            width={60}
+          />
+        </Link>
       </div>
 
       {navRight && navRight}
@@ -33,12 +45,18 @@ const NavigationBar: React.FC<INavigationBarProps> = ({
   );
 
   const onScroll = (event: Event) => {
-    if (window.scrollY > 200) {
-      setModeTransparent(false);
-    } else {
-      setModeTransparent(true);
+    if (isCurrentPageNeedTransparentMode) {
+      if (window.scrollY > 200) {
+        setModeTransparent(false);
+      } else {
+        setModeTransparent(true);
+      }
     }
   };
+
+  useEffect(() => {
+    setModeTransparent(isCurrentPageNeedTransparentMode);
+  }, [isCurrentPageNeedTransparentMode]);
 
   useEventListener("scroll", onScroll);
 

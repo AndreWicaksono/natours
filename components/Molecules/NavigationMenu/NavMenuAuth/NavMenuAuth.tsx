@@ -9,10 +9,10 @@ import {
 const NavMenuAuth = () => {
   return (
     <NavMenuAuthBase>
-      <ButtonTransparent className="mr-7" color="#f7f7f7">
+      <ButtonTransparent className="font-normal text-sm mr-6" color="#f7f7f7">
         Log in
       </ButtonTransparent>
-      <ButtonDarkPills>Sign Up</ButtonDarkPills>
+      <ButtonDarkPills className="font-normal text-sm">Sign Up</ButtonDarkPills>
     </NavMenuAuthBase>
   );
 };

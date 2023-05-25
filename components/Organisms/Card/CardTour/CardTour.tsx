@@ -13,9 +13,9 @@ import { LoadingBar } from "components/Atoms/General.css";
 
 import {
   ClockIcon,
-  LocationMarkerIcon,
+  MapPinIcon,
   StarIcon,
-} from "@heroicons/react/outline";
+} from "@heroicons/react/24/outline";
 
 interface ICardTourProps extends HTMLAttributes<HTMLDivElement> {
   duration: number | null | undefined;
@@ -85,7 +85,7 @@ const CardTour: React.FC<ICardTourProps> = ({
           Exploring the jaw-dropping US east coast by foot and by boat
         </p> */}
         <div className="card__data">
-          <LocationMarkerIcon color="#55c57a" height={20} width={20} />
+          <MapPinIcon color="#55c57a" height={20} width={20} />
           <span>{location}</span>
         </div>
         <div className="card__data">

@@ -2,7 +2,7 @@ import React, { HTMLAttributes, ReactNode, useState } from "react";
 
 import useWindowSize from "utils/Hooks/useWindowSize";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/solid";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { Pagination, Navigation } from "swiper";
 import { Swiper, useSwiper } from "swiper/react";
 
