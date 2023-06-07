@@ -9,6 +9,7 @@ import { SwiperSlide } from "swiper/react";
 import CardTour from "components/Organisms/Card/CardTour/CardTour";
 import { formatRupiah } from "utils/Formatter";
 import Link from "next/link";
+import { optimizeImage } from "utils/Cloudinary";
 
 const QUERY_TOUR_CAROUSEL = require("graphql/tours/Query/CarouselTour.graphql");
 
@@ -30,7 +31,14 @@ const SectionTourPreview: React.FC<HTMLAttributes<HTMLElement>> = ({
           loading={loading}
           slides={data?.tours?.data.map((tour) => {
             const photoPreview =
-              tour.attributes?.imagePreview.data?.attributes?.url;
+              optimizeImage(
+                tour.attributes?.imagePreview.data?.attributes?.url,
+                {
+                  convert: { from: ".jpg", to: ".webp" },
+                  cropMode: "c_fill",
+                  size: { height: 440, width: 752 },
+                }
+              ) ?? null;
 
             return (
               <SwiperSlide key={tour.id}>
@@ -45,11 +53,7 @@ const SectionTourPreview: React.FC<HTMLAttributes<HTMLElement>> = ({
                       loading={loading}
                       location={`${tour.attributes?.city}, ${tour.attributes?.province}`}
                       name={tour.attributes?.name}
-                      photoPreview={
-                        photoPreview
-                          ? `http://localhost:1337${photoPreview}`
-                          : null
-                      }
+                      photoPreview={photoPreview}
                       price={formatRupiah(tour.attributes?.price)}
                     />
                   </a>
