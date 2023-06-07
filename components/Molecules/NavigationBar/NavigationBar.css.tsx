@@ -31,5 +31,5 @@ export const NavigationBarBaseSolid = styled.div`
 
   max-width: 100%;
 
-  background-color: #444;
+  background-image: linear-gradient( to bottom right, rgba(125, 213, 111, 0.85), rgba(40, 180, 135, 0.85) );
 `;

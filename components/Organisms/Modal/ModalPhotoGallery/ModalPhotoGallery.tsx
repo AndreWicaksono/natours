@@ -10,7 +10,7 @@ import { StyledComponent } from "@emotion/styled";
 import { SerializedStyles, Theme } from "@emotion/react";
 
 import { Dialog, Transition } from "@headlessui/react";
-import { ViewGridIcon, XIcon } from "@heroicons/react/outline";
+import { Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/outline";
 
 import CarouselSimpleGallery from "components/Organisms/Carousel/CarouselSimpleGallery/CarouselSimpleGallery";
 import { ButtonViewPhotos } from "components/Organisms/PhotoGallery/GridPhotoGallery.css";
@@ -47,7 +47,7 @@ const ModalPhotoGallery: React.FC<IModalPhotoGallery> = ({ Button, css }) => {
       {Button ? (
         <Button>
           <ButtonViewPhotos type="button" onClick={openModal}>
-            <ViewGridIcon
+            <Squares2X2Icon
               className="mr-1"
               height={20}
               width={20}
@@ -62,7 +62,7 @@ const ModalPhotoGallery: React.FC<IModalPhotoGallery> = ({ Button, css }) => {
           type="button"
           onClick={openModal}
         >
-          <ViewGridIcon
+          <Squares2X2Icon
             className="mr-1"
             height={20}
             width={20}
@@ -97,7 +97,13 @@ const ModalPhotoGallery: React.FC<IModalPhotoGallery> = ({ Button, css }) => {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="h-screen w-full transform rounded-2xl bg-black text-left align-middle shadow-xl transition-all">
+                <Dialog.Panel
+                  className="h-screen w-full transform bg-black text-left align-middle shadow-xl transition-all"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient( to bottom right, rgba(125, 213, 111, 0.85), rgba(40, 180, 135, 0.85) )",
+                  }}
+                >
                   <div className="flex items-center justify-between mb-10 p-4 md:p-6">
                     <Dialog.Title
                       as="h3"
@@ -107,7 +113,7 @@ const ModalPhotoGallery: React.FC<IModalPhotoGallery> = ({ Button, css }) => {
                     </Dialog.Title>
 
                     <ButtonClose onClick={() => setIsOpen(false)}>
-                      <XIcon
+                      <XMarkIcon
                         color="#fff"
                         height={32}
                         width={32}

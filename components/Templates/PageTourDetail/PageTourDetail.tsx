@@ -1,5 +1,7 @@
 import React from "react";
 
+import Footer from "components/Organisms/Footer/Footer";
+import ProductOverview from "components/Organisms/ProductOverview/ProductOverview";
 import SectionPhotoGallery from "components/Organisms/Section/tour/SectionPhotoGallery";
 
 import useWindowSize from "utils/Hooks/useWindowSize";
@@ -15,18 +17,16 @@ const PageTourDetail = () => {
     <PageTourDetailBase>
       <header>
         {width >= 744 ? (
-          <div className="container mx-auto">
-            <h4 className="capitalize pb-1 text-2xl font-semibold">
-              Pangandaran Private Tour
-            </h4>
-            <p className="pb-4 text-sm">Pangandaran, Jawa Barat</p>
-
-            {sectionPhotoGallery}
-          </div>
+          <div className="container mx-auto">{sectionPhotoGallery}</div>
         ) : (
           sectionPhotoGallery
         )}
       </header>
+
+      <div className="container mx-auto">
+        <ProductOverview />
+      </div>
+      <Footer />
     </PageTourDetailBase>
   );
 };
