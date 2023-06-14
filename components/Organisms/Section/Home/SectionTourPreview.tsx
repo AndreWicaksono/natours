@@ -10,6 +10,7 @@ import CardTour from "components/Organisms/Card/CardTour/CardTour";
 import { formatRupiah } from "utils/Formatter";
 import Link from "next/link";
 import { optimizeImage } from "utils/Cloudinary";
+import { CardLinkWrapper } from "components/Organisms/Card/CardTour/CardTour.css";
 
 const QUERY_TOUR_CAROUSEL = require("graphql/tours/Query/CarouselTour.graphql");
 
@@ -41,23 +42,22 @@ const SectionTourPreview: React.FC<HTMLAttributes<HTMLElement>> = ({
               ) ?? null;
 
             return (
-              <SwiperSlide key={tour.id}>
+              <SwiperSlide key={tour.id} className="relative">
                 <Link
                   href={`/tour/${tour.attributes?.slug}`}
                   passHref
                   prefetch={false}
                 >
-                  <a>
-                    <CardTour
-                      duration={tour.attributes?.duration}
-                      loading={loading}
-                      location={`${tour.attributes?.city}, ${tour.attributes?.province}`}
-                      name={tour.attributes?.name}
-                      photoPreview={photoPreview}
-                      price={formatRupiah(tour.attributes?.price)}
-                    />
-                  </a>
+                  <CardLinkWrapper className="absolute" />
                 </Link>
+                <CardTour
+                  duration={tour.attributes?.duration}
+                  loading={loading}
+                  location={`${tour.attributes?.city}, ${tour.attributes?.province}`}
+                  name={tour.attributes?.name}
+                  photoPreview={photoPreview}
+                  price={formatRupiah(tour.attributes?.price)}
+                />
               </SwiperSlide>
             );
           })}

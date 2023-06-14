@@ -4,10 +4,10 @@ import styled from "@emotion/styled";
 const CardTourBase = styled.div`
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
 
   backface-visibility: hidden;
   background-color: #fff;
-  cursor: pointer;
   border-radius: 3px;
   box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 6px 0px;
   overflow: hidden;
@@ -118,11 +118,6 @@ export const CardFooter = styled.div`
 `;
 
 export const CardDetails = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-row-gap: calc(1.75rem / 16 * 10);
-  grid-column-gap: calc(2rem / 16 * 10);
-
   padding: calc(1.6rem / 16 * 10) calc(1.6rem / 16 * 10);
 
   /* @media only screen and (min-width: 1024px) {
@@ -138,6 +133,21 @@ export const CardDetails = styled.div`
       color: #777;
       font-size: calc(1.3rem / 16 * 10);
       font-weight: 300;
+
+      &:last-child {
+        grid-area: bottom-full;
+      }
+    }
+
+    &__grid {
+      display: grid;
+      grid-template-areas:
+        "top top"
+        "bottom-full bottom-full";
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
+      grid-row-gap: calc(1.6rem / 16 * 10);
+      grid-column-gap: calc(2rem / 16 * 10);
     }
 
     &__sub-heading {
@@ -163,16 +173,25 @@ export const CardHeader = styled.div`
   position: relative;
 `;
 
+export const CardLinkWrapper = styled.a`
+  position: absolute;
+  top: 0px;
+  right: 1.5rem;
+  bottom: 0;
+  left: 2rem;
+  z-index: 1;
+
+  @media only screen and (min-width: 1024px) {
+    cursor: pointer;
+  }
+`;
+
 export const CardPicture = styled.div`
   position: relative;
 
   height: calc(18rem / 16 * 10);
 
-  clip-path: polygon(0 0, 100% 0%, 100% 83%, 0% 98%);
-
-  @media only screen and (min-width: 1024px) {
-    height: calc(22rem / 16 * 10);
-  }
+  /* clip-path: polygon(0 0, 100% 0%, 100% 83%, 0% 98%); */
 
   &-overlay {
     position: absolute;
@@ -187,32 +206,29 @@ export const CardPicture = styled.div`
 
 export const HeadingTertirary = styled.h6`
   position: absolute;
-  bottom: calc(1rem / 16 * 10);
-  right: calc(1.6rem / 16 * 10);
-  z-index: 10;
+  top: 16px;
+  right: 8px;
+  left: 0;
 
-  width: 70%;
-
+  background-image: -webkit-gradient(
+    linear,
+    left top,
+    right bottom,
+    from(rgba(125, 213, 111, 0.85)),
+    to(rgba(40, 180, 135, 0.85))
+  );
+  background-image: linear-gradient(
+    to bottom right,
+    rgba(125, 213, 111, 0.85),
+    rgba(40, 180, 135, 0.85)
+  );
   color: #fff;
   font-size: calc(1.4rem / 16 * 10);
   font-weight: 300;
-  text-align: right;
   text-transform: uppercase;
 
   span {
     box-decoration-break: clone;
-    background-image: -webkit-gradient(
-      linear,
-      left top,
-      right bottom,
-      from(rgba(125, 213, 111, 0.85)),
-      to(rgba(40, 180, 135, 0.85))
-    );
-    background-image: linear-gradient(
-      to bottom right,
-      rgba(125, 213, 111, 0.85),
-      rgba(40, 180, 135, 0.85)
-    );
     line-height: 1;
     padding: calc(1rem / 16 * 10) calc(1.5rem / 16 * 10);
   }

@@ -7,15 +7,10 @@ import CardTourBase, {
   CardHeader,
   CardPicture,
   CardTourBaseLoading,
-  HeadingTertirary,
 } from "./CardTour.css";
 import { LoadingBar } from "components/Atoms/General.css";
 
-import {
-  ClockIcon,
-  MapPinIcon,
-  StarIcon,
-} from "@heroicons/react/24/outline";
+import { ClockIcon, MapPinIcon, StarIcon, UsersIcon } from "@heroicons/react/24/outline";
 
 interface ICardTourProps extends HTMLAttributes<HTMLDivElement> {
   duration: number | null | undefined;
@@ -73,24 +68,34 @@ const CardTour: React.FC<ICardTourProps> = ({
             }
           />
         </CardPicture>
-
-        <HeadingTertirary>
+        {/* <HeadingTertirary>
           <span>{name}</span>
-        </HeadingTertirary>
+        </HeadingTertirary> */}
       </CardHeader>
 
       <CardDetails>
+        <h6 className="text-sm pb-3">
+          <span>{name}</span>
+        </h6>
         {/* <h4 className="card__sub-heading">medium 7-day tour</h4> */}
         {/* <p className="card__text">
           Exploring the jaw-dropping US east coast by foot and by boat
         </p> */}
-        <div className="card__data">
-          <MapPinIcon color="#55c57a" height={20} width={20} />
-          <span>{location}</span>
-        </div>
-        <div className="card__data">
-          <ClockIcon color="#55c57a" height={20} width={20} />
-          <span>{duration}-Day</span>
+        <div className="card__grid">
+          <div className="card__data">
+            <UsersIcon color="#55c57a" height={20} width={20} />
+            <span>1 - 3</span>
+          </div>
+          
+          <div className="card__data">
+            <ClockIcon color="#55c57a" height={20} width={20} />
+            <span>{duration}-Day</span>
+          </div>
+
+          <div className="card__data">
+            <MapPinIcon color="#55c57a" height={20} width={20} />
+            <span>{location}</span>
+          </div>
         </div>
       </CardDetails>
 

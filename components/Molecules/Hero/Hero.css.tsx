@@ -30,7 +30,19 @@ export const Button = styled.button`
 const HeroBase = styled.header`
   position: relative;
 
-  height: 30vh;
+  height: 40vh;
+
+  @media only screen and (orientation: landscape) {
+    height: 90vh
+  }
+
+  @media only screen and (min-width: 768px) and (orientation: landscape) {
+    height: 75vh
+  }
+
+  @media only screen and (min-width: 768px) and (orientation: portrait) {
+    height: 35vh;
+  }
 
   @media only screen and (min-width: 1024px) {
     height: 50vh;

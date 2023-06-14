@@ -9,6 +9,7 @@ export type LabelCheckpoint_CheckpointBullet_PathObject = {
 
 const LabelCheckpoint: React.FC<
   {
+    fontSize?: number;
     path?: LabelCheckpoint_CheckpointBullet_PathObject;
     text?: string;
   } & HTMLAttributes<HTMLDivElement>
@@ -30,13 +31,13 @@ const LabelCheckpoint: React.FC<
   );
 };
 
-const LabelCheckpointBase = styled.div`
+const LabelCheckpointBase = styled.div<{ fontSize?: number }>`
   position: relative;
 
   & > p {
     display: inline-block;
 
-    font-size: 14px;
+    font-size: ${({ fontSize }) => (fontSize ? `${fontSize}px` : "14px")};
     font-weight: 300;
     line-height: 20px;
   }

@@ -1,7 +1,7 @@
 import styled from "@emotion/styled";
 
 const PageTourDetailBase = styled.div`
-  padding-top: 80px;
+  padding-top: 60px;
 
   @media only screen and (min-width: 744px) {
     padding-top: calc(80px + 16px);

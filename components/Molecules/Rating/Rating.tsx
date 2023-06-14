@@ -60,17 +60,19 @@ const Rating: React.FC<
 
   return (
     <RatingBase {...props}>
-      {renderRatingStars()}{" "}
-      <span className="pl-2 text-sm font-medium text-gray-600">
-        ({ratingOneDigitDecimal})
-      </span>
-      <p className="sr-only">{value} out of 5 stars</p>
-      <a
-        href={"#"}
-        className="pl-2 text-sm font-medium text-gray-600 hover:text-green-500 hover:underline hover:underline-offset-2"
-      >
-        {totalReview} ulasan
-      </a>
+      <div className="flex">{renderRatingStars()} </div>
+      <div className="inline-flex gap-x-1">
+        <span className="text-sm font-medium text-gray-600">
+          ({ratingOneDigitDecimal})
+        </span>
+        <p className="sr-only">{value} out of 5 stars</p>
+        <a
+          href={"#"}
+          className="text-sm font-medium text-gray-600 hover:text-green-500 hover:underline hover:underline-offset-2"
+        >
+          {totalReview} ulasan
+        </a>
+      </div>
     </RatingBase>
   );
 };
