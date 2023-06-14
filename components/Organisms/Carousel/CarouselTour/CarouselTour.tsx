@@ -3,7 +3,7 @@ import React, { HTMLAttributes, ReactNode, useState } from "react";
 import useWindowSize from "utils/Hooks/useWindowSize";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
-import { Pagination, Navigation } from "swiper";
+import { Navigation } from "swiper";
 import { Swiper, useSwiper } from "swiper/react";
 
 import "swiper/css";
@@ -41,18 +41,18 @@ const CarouselTour: React.FC<ICarouselTourProps> = ({
     >
       <Swiper
         className="mySwiper"
-        modules={[Pagination, Navigation]}
+        modules={[Navigation]}
         navigation={true}
         pagination={{
           clickable: true,
         }}
         spaceBetween={16}
         slidesPerGroup={1}
-        slidesPerView={1}
+        slidesPerView={1.3}
         breakpoints={{
-          768: { slidesPerView: 2, slidesPerGroup: 2 },
-          1024: { slidesPerGroup: 3, slidesPerView: 3, touchRatio: 0 },
-          1208: { slidesPerGroup: 4, slidesPerView: 4, touchRatio: 0 },
+          768: { slidesPerView: 3, slidesPerGroup: 3 },
+          1024: { slidesPerGroup: 4, slidesPerView: 4 },
+          1208: { slidesPerGroup: 5, slidesPerView: 5, touchRatio: 0 },
         }}
       >
         {slides}

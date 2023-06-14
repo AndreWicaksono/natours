@@ -1,27 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
-/*
-  This example requires some changes to your config:
-  
-  ```
-  // tailwind.config.js
-  module.exports = {
-    // ...
-    theme: {
-      extend: {
-        gridTemplateRows: {
-          '[auto,auto,1fr]': 'auto auto 1fr',
-        },
-      },
-    },
-    plugins: [
-      // ...
-      require('@tailwindcss/aspect-ratio'),
-    ],
-  }
-  ```
-*/
 import { Fragment, RefObject, useEffect, useRef, useState } from "react";
-import { LockClosedIcon, StarIcon } from "@heroicons/react/20/solid";
+import {
+  BanknotesIcon,
+} from "@heroicons/react/20/solid";
 import { RadioGroup } from "@headlessui/react";
 import Breadcrumb from "components/Molecules/Breadcrumb/Breadcrumb";
 import TabsGeneral from "../Tabs/General";
@@ -116,13 +96,13 @@ export default function Example() {
     switch (true) {
       case currentIndex === firstIndex:
         return {
-          className: "pb-2 text-gray-900",
+          className: "pb-4 text-gray-900",
           path: { top: { size: 0 } },
         };
 
       case currentIndex > firstIndex && currentIndex < lastIndex:
         return {
-          className: "pb-2 text-gray-900",
+          className: "pb-4 text-gray-900",
         };
 
       case currentIndex === lastIndex:
@@ -180,13 +160,38 @@ export default function Example() {
 
               {/* Reviews */}
               {/* StarIcon should be changed into this method https://github.com/tailwindlabs/heroicons/discussions/424 */}
-              <div>
-                {/* <h3 className="sr-only">Reviews</h3>
+              {/* <div> */}
+              {/* <h3 className="sr-only">Reviews</h3>
                 <div className="flex items-center">
                   <Rating className="pb-6" totalReview={2} value={4.7} />
                 </div> */}
+              <div className="hidden lg:block bg-white rounded-xl p-4 lg:p-6 shadow-xl">
+                <p className="pb-6 text-3xl tracking-tight text-gray-900">
+                  {product.price}
+                </p>
 
-                {isLogin ? (
+                <div className="flex items-center">
+                  <Rating className="pb-6" totalReview={2} value={4.7} />
+                </div>
+
+                <button
+                  type="submit"
+                  className="group relative mb-2 flex w-full justify-center rounded-sm border border-transparent bg-gradient-natours py-2 px-4 text-sm font-medium text-white hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                >
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <BanknotesIcon
+                      className="h-5 w-5 text-white group-hover:text-white"
+                      aria-hidden="true"
+                      height={16}
+                      width={16}
+                    />
+                  </span>
+
+                  <span>Pesan sekarang</span>
+                </button>
+              </div>
+
+              {/* {isLogin ? (
                   <FormBooking
                     className="bg-neutral-50 shadow-xl sm:overflow-hidden sm:rounded-md mb-6"
                     header={
@@ -228,7 +233,7 @@ export default function Example() {
                     }
                   />
                 )}
-              </div>
+              </div> */}
 
               <form className="mt-10">
                 {/* Colors */}
@@ -515,7 +520,12 @@ export default function Example() {
                         (schedule, scheduleIndex) => {
                           return (
                             <LabelCheckpoint
+                              fontSize={16}
                               key={`${product.schedules[0].name}-${schedule.time}`}
+                              path={{
+                                top: { color: "#ccc", size: 20 },
+                                bottom: { color: "#ccc", size: 14 },
+                              }}
                               text={`${schedule.time} ${schedule.activity}`}
                               {...generateLabelCheckpointProps(
                                 scheduleIndex,

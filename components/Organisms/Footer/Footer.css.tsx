@@ -3,6 +3,16 @@ import styled from "@emotion/styled";
 const FooterBase = styled.footer`
   background-color: #333;
   color: #f7f7f7;
+
+  picture {
+    img {
+      @media only screen and (min-width: 37.5em) {
+        max-width: 65%;
+
+        margin: 0 auto;
+      }
+    }
+  }
 `;
 
 export const FooterCopyright = styled.p`
