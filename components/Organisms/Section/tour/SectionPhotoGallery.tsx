@@ -11,23 +11,23 @@ const SectionPhotoGallery: React.FC = () => {
   const data = [
     {
       id: 1,
-      urlImage: "https://placeimg.com/1200/900/nature",
+      urlImage: "https://picsum.photos/1200/900.webp?random=1",
     },
     {
       id: 2,
-      urlImage: "https://placeimg.com/1200/900/people",
+      urlImage: "https://picsum.photos/1200/900.webp?random=2",
     },
     {
       id: 3,
-      urlImage: "https://placeimg.com/1200/900/tech",
+      urlImage: "https://picsum.photos/1200/900.webp?random=3",
     },
     {
       id: 4,
-      urlImage: "https://placeimg.com/1200/900/arch",
+      urlImage: "https://picsum.photos/1200/900.webp?random=4",
     },
     {
       id: 5,
-      urlImage: "https://placeimg.com/1200/900/nature/grayscale",
+      urlImage: "https://picsum.photos/1200/900.webp?random=5",
     },
   ];
 

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: { domains: ["res.cloudinary.com", "localhost", "placeimg.com"] },
+  images: { domains: ["res.cloudinary.com", "localhost", "picsum.photos"] },
   reactStrictMode: true,
   webpack: (config, { webpack, buildId, isServer }) => {
     config.module.rules.push({
