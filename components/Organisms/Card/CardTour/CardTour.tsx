@@ -10,7 +10,14 @@ import CardTourBase, {
 } from "./CardTour.css";
 import { LoadingBar } from "components/Atoms/General.css";
 
-import { ClockIcon, MapPinIcon, StarIcon, UsersIcon } from "@heroicons/react/24/outline";
+import {
+  ClockIcon,
+  MapPinIcon,
+  StarIcon,
+  UsersIcon,
+} from "@heroicons/react/24/outline";
+
+import { generateNumberBetweenRange } from "utils/Number";
 
 interface ICardTourProps extends HTMLAttributes<HTMLDivElement> {
   duration: number | null | undefined;
@@ -64,7 +71,10 @@ const CardTour: React.FC<ICardTourProps> = ({
             src={
               photoPreview
                 ? photoPreview
-                : "https://placeimg.com/330/220/nature"
+                : `https://picsum.photos/330/220.webp?random=${generateNumberBetweenRange(
+                    0,
+                    20
+                  )}`
             }
           />
         </CardPicture>
@@ -86,7 +96,7 @@ const CardTour: React.FC<ICardTourProps> = ({
             <UsersIcon color="#55c57a" height={20} width={20} />
             <span>1 - 3</span>
           </div>
-          
+
           <div className="card__data">
             <ClockIcon color="#55c57a" height={20} width={20} />
             <span>{duration}-Day</span>
