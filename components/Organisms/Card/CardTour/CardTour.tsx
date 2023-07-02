@@ -22,7 +22,7 @@ import { generateNumberBetweenRange } from "utils/Number";
 interface ICardTourProps extends HTMLAttributes<HTMLDivElement> {
   duration: number | null | undefined;
   loading?: boolean;
-  location: string;
+  location: string | null | undefined;
   name: string | undefined;
   photoPreview?: string | null;
   price: string;
@@ -102,10 +102,12 @@ const CardTour: React.FC<ICardTourProps> = ({
             <span>{duration}-Day</span>
           </div>
 
-          <div className="card__data">
-            <MapPinIcon color="#55c57a" height={20} width={20} />
-            <span>{location}</span>
-          </div>
+          {location && (
+            <div className="card__data">
+              <MapPinIcon color="#55c57a" height={20} width={20} />
+              <span>{location}</span>
+            </div>
+          )}
         </div>
       </CardDetails>
 
@@ -116,7 +118,12 @@ const CardTour: React.FC<ICardTourProps> = ({
         </p>
         {rating && (
           <p className="card__ratings flex">
-            <StarIcon className="mr-1" color="#ffc400" height={20} width={20} />
+            <StarIcon
+              className="mr-1"
+              color="#ffc400"
+              height={20}
+              width={20}
+            />
             <span className="card__footer-value mr-1"> 4.3</span>{" "}
             <span className="card__footer-text"> (7)</span>
           </p>
