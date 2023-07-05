@@ -1,18 +1,19 @@
 import React, { HTMLAttributes } from "react";
+
+import { BanknotesIcon } from "@heroicons/react/20/solid";
 import dayjs from "dayjs";
 
 import Input from "components/Molecules/FormInput/Input/Input";
-import { BanknotesIcon } from "@heroicons/react/20/solid";
 
 const FormBooking: React.FC<
-  HTMLAttributes<HTMLDivElement> & { header?: string | React.ReactElement }
+  HTMLAttributes<HTMLDivElement> & {
+    header?: string | React.ReactElement;
+  }
 > = ({
   className = "bg-neutral-50 shadow-xl sm:overflow-hidden sm:rounded-md",
   header,
   ...props
 }) => {
-  console.log(dayjs().format());
-
   return (
     <div className={className} {...props}>
       <div className="space-y-6 px-4 py-5 sm:p-6">
@@ -20,7 +21,9 @@ const FormBooking: React.FC<
           <div className="-space-y-px rounded-md shadow-sm">
             {header &&
               (typeof header === "string" ? (
-                <h4 className="text-xl text-stone-700 pb-6">{header}</h4>
+                <h4 className="text-xl text-stone-700 pb-6">
+                  {header}
+                </h4>
               ) : (
                 header
               ))}

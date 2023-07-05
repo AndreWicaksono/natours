@@ -1,10 +1,4 @@
-import {
-  ChangeEvent,
-  ChangeEventHandler,
-  HTMLAttributes,
-  useEffect,
-  useState,
-} from "react";
+import { ChangeEvent, HTMLAttributes, useState } from "react";
 
 import {
   ArrowsUpDownIcon,
@@ -45,7 +39,10 @@ const initialFilterState: ObjectFilter = {
   sort: "none",
 };
 
-const Filter: React.FC<IFilterProps> = ({}) => {
+const Filter: React.FC<IFilterProps> = ({
+  className = "overflow-hidden rounded-lg border border-gray-200 shadow-lg text-gray-700",
+  ...props
+}) => {
   const [filter, setFilter] = useState<StateFilter>({
     draft: initialFilterState,
     saved: initialFilterState,
@@ -84,15 +81,11 @@ const Filter: React.FC<IFilterProps> = ({}) => {
     });
   };
 
-  useEffect(() => {
-    console.log(filter);
-  }, [filter]);
-
   return (
-    <div className="sticky top-[96px] max-w-xs w-screen overflow-hidden rounded-lg border border-gray-200 shadow-lg text-gray-700">
-      <summary className="flex select-none items-center bg-gray-100 px-4 py-3">
+    <div className={className} {...props}>
+      <summary className="flex select-none items-center bg-gray-100 px-4 py-3 space-x-2">
         <AdjustmentsHorizontalIcon height={20} width={20} />
-        <span className="text-normal font-bold pl-2">Filters </span>
+        <span className="text-normal font-bold">Filters </span>
       </summary>
 
       <form

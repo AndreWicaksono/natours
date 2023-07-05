@@ -1,5 +1,6 @@
 import React, { HTMLAttributes } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 import HeroBase, { Button } from "./Hero.css";
 
@@ -28,7 +29,9 @@ const Hero: React.FC<IHeroProps> = ({ className, srcImage }) => {
             </span>
           </h1>
 
-          <Button>Discover our tours</Button>
+          <Link href="/tour" passHref prefetch={false}>
+            <Button>Discover our tours</Button>
+          </Link>
         </div>
       </div>
     </HeroBase>

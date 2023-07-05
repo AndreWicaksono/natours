@@ -1,15 +1,16 @@
 import React, { HTMLAttributes } from "react";
+import Link from "next/link";
 
 import { DocumentNode, useQuery } from "@apollo/client";
+import { SwiperSlide } from "swiper/react";
 
+import CardTour from "components/Molecules/Card/CardTour/CardTour";
+import { CardLinkWrapper } from "components/Molecules/Card/CardTour/CardTour.css";
 import CarouselTour from "components/Organisms/Carousel/CarouselTour/CarouselTour";
 
-import { SwiperSlide } from "swiper/react";
-import CardTour from "components/Organisms/Card/CardTour/CardTour";
-import { formatRupiah } from "utils/Formatter";
-import Link from "next/link";
 import { optimizeImage } from "utils/Cloudinary";
-import { CardLinkWrapper } from "components/Organisms/Card/CardTour/CardTour.css";
+import { formatRupiah } from "utils/Formatter";
+
 import { Query, QueryToursArgs } from "gql/graphql";
 
 const QUERY_TOUR_CAROUSEL: DocumentNode = require("gql/tours/Query/CarouselTour.graphql");
@@ -49,13 +50,16 @@ const SectionTourPreview: React.FC<HTMLAttributes<HTMLElement>> = ({
 
             return (
               <SwiperSlide key={tour.id} className="relative">
-                <Link
-                  href={`/tour/${tour.attributes?.slug}`}
-                  passHref
-                  prefetch={false}
-                >
-                  <CardLinkWrapper className="absolute" />
-                </Link>
+                {!loading && (
+                  <Link
+                    href={`/tour/${tour.attributes?.slug}`}
+                    passHref
+                    prefetch={false}
+                  >
+                    <CardLinkWrapper className="absolute" />
+                  </Link>
+                )}
+
                 <CardTour
                   duration={tour.attributes?.duration}
                   loading={loading}
