@@ -15,6 +15,13 @@ fragment TourPreviewParts on Tour {
   }
   name
   price
-  province
+  provinces {
+    data {
+      id
+      attributes {
+        name
+      }
+    }
+  }
   slug
 }

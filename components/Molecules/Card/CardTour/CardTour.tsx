@@ -6,7 +6,6 @@ import CardTourBase, {
   CardFooter,
   CardHeader,
   CardPicture,
-  CardTourBaseLoading,
 } from "./CardTour.css";
 import { LoadingBar } from "components/Atoms/General.css";
 
@@ -19,10 +18,11 @@ import {
 
 import { generateNumberBetweenRange } from "utils/Number";
 
-interface ICardTourProps extends HTMLAttributes<HTMLDivElement> {
+export interface ICardTourProps
+  extends HTMLAttributes<HTMLDivElement> {
   duration: number | null | undefined;
   loading?: boolean;
-  location: string;
+  location: string | null | undefined;
   name: string | undefined;
   photoPreview?: string | null;
   price: string;
@@ -37,29 +37,33 @@ const CardTour: React.FC<ICardTourProps> = ({
   photoPreview,
   price,
   rating,
+  ...props
 }) => {
   if (loading) {
     return (
-      <CardTourBaseLoading>
-        <CardPicture>
-          <LoadingBar height="100%" width="100%" />
-        </CardPicture>
+      <div
+        role="status"
+        className="w-full space-y-8 animate-pulse md:space-y-0 shadow-[rgba(0,_0,_0,_0.12)_0px_1px_6px_0px]"
+      >
+        <div className="flex items-center justify-center w-full h-[180px] bg-gray-300 rounded-tr rounded-tl dark:bg-gray-700"></div>
+        <div className="w-full p-4 min-h-[120px]">
+          <div className="h-3 bg-gray-200 rounded-full dark:bg-gray-700 mb-3"></div>
 
-        <CardDetails>
-          <LoadingBar height="24px" width="100%" />
-          <LoadingBar height="24px" width="100%" />
-        </CardDetails>
+          <div className="flex justify-between mb-5">
+            <div className="basis-4/12 h-2 w-1/3 bg-gray-200 rounded-md dark:bg-gray-700"></div>
+            <div className="basis 4/12 h-2 w-1/3 bg-gray-200 rounded-md dark:bg-gray-700 max-w-[480px]"></div>
+          </div>
 
-        <CardFooter>
-          <LoadingBar height="24px" width="100%" />
-          <LoadingBar height="24px" width="100%" />
-        </CardFooter>
-      </CardTourBaseLoading>
+          <div className="h-2 w-1/3 bg-gray-200 rounded-md dark:bg-gray-700"></div>
+        </div>
+        <CardFooter className="min-h-[54px]"></CardFooter>
+        <span className="sr-only">Loading...</span>
+      </div>
     );
   }
 
   return (
-    <CardTourBase>
+    <CardTourBase {...props}>
       <CardHeader>
         <CardPicture>
           <div className="card__picture-overlay">&nbsp;</div>
@@ -102,10 +106,12 @@ const CardTour: React.FC<ICardTourProps> = ({
             <span>{duration}-Day</span>
           </div>
 
-          <div className="card__data">
-            <MapPinIcon color="#55c57a" height={20} width={20} />
-            <span>{location}</span>
-          </div>
+          {location && (
+            <div className="card__data">
+              <MapPinIcon color="#55c57a" height={20} width={20} />
+              <span>{location}</span>
+            </div>
+          )}
         </div>
       </CardDetails>
 
@@ -116,7 +122,12 @@ const CardTour: React.FC<ICardTourProps> = ({
         </p>
         {rating && (
           <p className="card__ratings flex">
-            <StarIcon className="mr-1" color="#ffc400" height={20} width={20} />
+            <StarIcon
+              className="mr-1"
+              color="#ffc400"
+              height={20}
+              width={20}
+            />
             <span className="card__footer-value mr-1"> 4.3</span>{" "}
             <span className="card__footer-text"> (7)</span>
           </p>
