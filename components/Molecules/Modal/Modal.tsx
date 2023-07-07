@@ -1,9 +1,12 @@
 import {
-  useState,
+  ButtonHTMLAttributes,
+  DependencyList,
   Fragment,
   HTMLAttributes,
-  ButtonHTMLAttributes,
+  useEffect,
+  useState,
 } from "react";
+
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/20/solid";
 
@@ -13,6 +16,7 @@ const Modal: React.FC<
     classNameButton?: string;
     classNamePanel?: string;
     closeIconClassName?: string;
+    dependencyListCloseModal?: DependencyList;
     heading?: string | React.ReactElement;
   } & HTMLAttributes<HTMLDivElement>
 > = ({
@@ -21,8 +25,13 @@ const Modal: React.FC<
   classNamePanel = "w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all",
   closeIconClassName = "",
   heading,
+  dependencyListCloseModal = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [dependencyListCloseModal]);
 
   return (
     <>

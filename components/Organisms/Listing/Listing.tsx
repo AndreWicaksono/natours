@@ -2,19 +2,27 @@ import {
   ButtonHTMLAttributes,
   Fragment,
   HTMLAttributes,
+  MouseEvent,
   MouseEventHandler,
 } from "react";
 
 import { AdjustmentsHorizontalIcon } from "@heroicons/react/24/outline";
 
-import Filter from "components/Molecules/Filter/Filter";
 import Modal from "components/Molecules/Modal/Modal";
-
-import useWindowSize from "utils/Hooks/useWindowSize";
 import Pagination from "components/Molecules/Pagination/Pagination";
 
-interface ListingProps extends HTMLAttributes<HTMLElement> {
+import useWindowSize from "utils/Hooks/useWindowSize";
+import FilterListingTour, {
+  TypeObjectFilter_TourListing,
+} from "components/Organisms/Filter/FilterListingTour/FilterListingTour";
+
+interface IListingProps extends HTMLAttributes<HTMLElement> {
+  appliedFilter: TypeObjectFilter_TourListing;
   heading?: string;
+  onFilterApplied: (
+    e: MouseEvent<HTMLButtonElement>,
+    stateToBeApplied: TypeObjectFilter_TourListing
+  ) => void;
   pagination: {
     onClick: MouseEventHandler<HTMLButtonElement>;
     pageActive: number;
@@ -29,9 +37,11 @@ const ButtonModal: React.FC<
   ButtonHTMLAttributes<HTMLButtonElement>
 > = (props) => <button {...props}>{props.children}</button>;
 
-const Listing: React.FC<ListingProps> = ({
+const Listing: React.FC<IListingProps> = ({
+  appliedFilter,
   children,
   heading,
+  onFilterApplied,
   pagination,
 }) => {
   const { width } = useWindowSize();
@@ -59,15 +69,22 @@ const Listing: React.FC<ListingProps> = ({
             )}
             classNamePanel="h-screen sm:h-auto relative w-full max-w-md transform overflow-hidden sm:rounded-lg bg-white text-left align-middle transition-all"
             closeIconClassName="absolute inline-block right-2 top-2 m-auto"
+            dependencyListCloseModal={[appliedFilter]}
           >
-            <Filter className="overflow-x-hidden overflow-y-scroll text-gray-700" />
+            <FilterListingTour
+              appliedFilter={appliedFilter}
+              onSave={onFilterApplied}
+            />
           </Modal>
         )}
       </div>
 
       <div className="grid lg:grid-cols-1 xl:grid-cols-[minmax(0,_320px)_1fr] gap-4 items-start pb-8">
         {width >= 1208 && (
-          <Filter className="hidden xl:grid xl:max-w-xs xl:w-screen xl:sticky xl:top-[96px] overflow-hidden rounded-lg border border-gray-200 shadow-lg text-gray-700" />
+          <FilterListingTour
+            appliedFilter={appliedFilter}
+            onSave={onFilterApplied}
+          />
         )}
 
         <div className="space-y-8">
