@@ -1,0 +1,14 @@
+# This is an example.envrc file for direnv.
+# To use it, copy this file to a new file named.envrc:
+# cp.envrc.example .envrc
+
+# Then, edit the new .envrc file and update the path to your personal Nix configuration flake.
+
+# For NixOS users with a centralized flake configuration:
+# Replace '~/path/to/your/nix-config' with the actual path to your Nix setup.
+use flake ~/path/to/your/nix-config#project-a
+
+# ---
+# Alternative for non-NixOS users or those with a project-local flake:
+# If you have a flake.nix in the root of this project, you can simply use:
+# use flake.

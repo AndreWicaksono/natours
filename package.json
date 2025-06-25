@@ -1,0 +1,16 @@
+{
+  "name": "natours",
+  "version": "1.0.0",
+  "description": "Natours app using a monorepo strategy",
+  "main": "index.js",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint"
+  },
+  "keywords": [],
+  "author": "Andre Wicaksono",
+  "license": "MIT",
+  "packageManager": "pnpm@10.12.2",
+  "private": true
+}
