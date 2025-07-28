@@ -1,6 +1,11 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@^14";
 
+// Disable JWT auth to allow Stripe webhook calls without Authorization header
+export const config = {
+  auth: false,
+};
+
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2023-10-16",
 });
@@ -30,8 +35,10 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const billingSchema = supabaseAdmin.schema("billing");
+
     // Idempotency check: skip if event already processed
-    const { data: existingEvent, error: eventError } = await supabaseAdmin
+    const { data: existingEvent, error: eventError } = await billingSchema
       .from("stripe_webhook_events")
       .select("event_id")
       .eq("event_id", event.id)
@@ -54,57 +61,97 @@ Deno.serve(async (req) => {
     let booking_id: string | undefined;
 
     switch (event.type) {
+      /*
+        For Stripe Checkout with mostly card payments, handling just checkout.session.completed and payment_intent.payment_failed may suffice.
+        If in the future I decide to support asynchronous payment methods, I should also handle checkout.session.async_payment_failed to catch failures that happen after session completion.
+      */
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        booking_id = session.metadata?.booking_id;
+        const stripeSessionId = session.id;
 
-        if (booking_id) {
-          const { error } = await supabaseAdmin
-            .from("bookings")
-            .update({ status: "confirmed" })
-            .eq("id", booking_id)
-            .eq("status", "pending"); // only update if pending
-          if (error) throw error;
+        // 1. Find the payment record by stripe_session_id
+        const { data: payment, error: paymentError } = await billingSchema
+          .from("payments")
+          .select("id, booking_id, status")
+          .eq("stripe_session_id", stripeSessionId)
+          .single();
+
+        if (paymentError) {
+          console.error("Error fetching payment record:", paymentError);
+          throw paymentError;
+        }
+
+        if (!payment) {
+          console.error(
+            "Payment record not found for stripe_session_id:",
+            stripeSessionId,
+          );
+          break; // or throw error if I want to fail webhook processing
+        }
+
+        // 2. Update payment status to 'succeeded' if not already
+        if (payment.status !== "succeeded") {
+          const { error: updatePaymentError } = await billingSchema
+            .from("payments")
+            .update({ status: "succeeded" })
+            .eq("id", payment.id);
+
+          if (updatePaymentError) {
+            console.error("Error updating payment status:", updatePaymentError);
+            throw updatePaymentError;
+          }
           console.log(
-            `Booking ${booking_id} confirmed (checkout.session.completed).`,
+            `Payment with id of ${payment.id} status updated to succeeded.`,
           );
         }
-        break;
-      }
 
-      case "payment_intent.succeeded": {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        booking_id = paymentIntent.metadata?.booking_id;
-
-        if (booking_id) {
-          const { error } = await supabaseAdmin
+        // 3. Update booking status to 'confirmed' only if currently 'pending'
+        if (payment.booking_id) {
+          const { error: updateBookingError } = await supabaseAdmin
+            .schema("tour")
             .from("bookings")
             .update({ status: "confirmed" })
-            .eq("id", booking_id)
+            .eq("id", payment.booking_id)
             .eq("status", "pending");
-          if (error) throw error;
+
+          if (updateBookingError) {
+            console.error("Error updating booking status:", updateBookingError);
+            throw updateBookingError;
+          }
           console.log(
-            `Booking ${booking_id} confirmed (payment_intent.succeeded).`,
+            `Booking with id of ${payment.booking_id} confirmed (checkout.session.completed).`,
           );
+        } else {
+          console.warn("No booking_id linked to payment:", payment.id);
         }
+
         break;
       }
 
       case "payment_intent.payment_failed": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        booking_id = paymentIntent.metadata?.booking_id;
 
-        if (booking_id) {
-          // Use transaction to update booking status and release seats atomically
-          const { error: txError } = await supabaseAdmin.rpc(
-            "update_booking_cancelled_and_release_seats",
-            { booking_id },
-          );
-          if (txError) throw txError;
-          console.log(
-            `Booking ${booking_id} cancelled due to payment failure and seats released.`,
-          );
+        // Find payment by paymentIntent.id or stripe_session_id if stored
+        const { data: payment, error: paymentError } = await billingSchema
+          .from("payments")
+          .select("id, booking_id, status")
+          .eq("stripe_payment_intent_id", paymentIntent.id) // or stripe_session_id if I store that instead
+          .single();
+
+        if (paymentError) {
+          console.error("Error fetching payment record:", paymentError);
+          throw paymentError;
         }
+
+        if (payment && payment.status !== "failed") {
+          await billingSchema
+            .from("payments")
+            .update({ status: "failed" })
+            .eq("id", payment.id);
+          console.log(`Payment ${payment.id} status updated to failed.`);
+        }
+
+        // Do NOT update booking status here; keep it pending per my logic
         break;
       }
 
@@ -113,10 +160,9 @@ Deno.serve(async (req) => {
         booking_id = session.metadata?.booking_id;
 
         if (booking_id) {
-          const { error: txError } = await supabaseAdmin.rpc(
-            "update_booking_expired_and_release_seats",
-            { booking_id },
-          );
+          const { error: txError } = await supabaseAdmin
+            .schema("tour")
+            .rpc("update_booking_expired_and_release_seats", { booking_id });
           if (txError) throw txError;
           console.log(
             `Booking ${booking_id} marked as expired and seats released.`,
@@ -130,10 +176,9 @@ Deno.serve(async (req) => {
         booking_id = charge.metadata?.booking_id;
 
         if (booking_id) {
-          const { error: txError } = await supabaseAdmin.rpc(
-            "update_booking_cancelled_and_release_seats",
-            { booking_id },
-          );
+          const { error: txError } = await supabaseAdmin
+            .schema("tour")
+            .rpc("update_booking_cancelled_and_release_seats", { booking_id });
           if (txError) throw txError;
           console.log(
             `Booking ${booking_id} cancelled due to refund and seats released.`,
@@ -148,7 +193,7 @@ Deno.serve(async (req) => {
     }
 
     // Record event ID to ensure idempotency
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await billingSchema
       .from("stripe_webhook_events")
       .insert({ event_id: event.id, processed_at: new Date().toISOString() });
 

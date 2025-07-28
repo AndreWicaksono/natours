@@ -14,5 +14,8 @@
   "author": "Andre Wicaksono",
   "license": "MIT",
   "packageManager": "pnpm@10.12.2",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "supabase": "^2.31.8"
+  }
 }

@@ -56,9 +56,11 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
+    const tourSchema = supabaseAdmin.schema("tour");
+
     // --- 1. Fetch availability rules for the tour ---
     const { data: availabilityRule, error: availabilityError } =
-      await supabaseAdmin
+      await tourSchema
         .from("availability_rules")
         .select("start_date, end_date, days_of_week")
         .eq("tour_id", tour_id)
@@ -111,14 +113,15 @@ serve(async (req) => {
     }
 
     // --- 4. Check exceptions ---
-    const { data: exceptions, error: exceptionsError } = await supabaseAdmin
+    const { data: exceptions, error: exceptionsError } = await tourSchema
       .from("availability_exceptions")
-      .select("exception_date")
+      .select("unavailable_date")
       .eq("tour_id", tour_id)
-      .eq("exception_date", start_date) // exact match on date string
+      .eq("unavailable_date", start_date) // exact match on date string
       .limit(1);
 
     if (exceptionsError) throw exceptionsError;
+
     if (exceptions.length > 0) {
       return new Response(
         JSON.stringify({
@@ -134,7 +137,7 @@ serve(async (req) => {
     // --- 5. Proceed with existing booking logic ---
 
     // Find or create tour_schedule for the requested date
-    let { data: schedule, error: scheduleError } = await supabaseAdmin
+    let { data: schedule, error: scheduleError } = await tourSchema
       .from("tour_schedules")
       .select("*")
       .eq("tour_id", tour_id)
@@ -146,7 +149,7 @@ serve(async (req) => {
     }
 
     // Fetch tour details for max group size, price, currency
-    const { data: tourData, error: tourError } = await supabaseAdmin
+    const { data: tourData, error: tourError } = await tourSchema
       .from("tours")
       .select("max_group_size, name, price, currency")
       .eq("id", tour_id)
@@ -156,7 +159,7 @@ serve(async (req) => {
 
     if (!schedule) {
       // Create schedule on-demand
-      const { data: newSchedule, error: newScheduleError } = await supabaseAdmin
+      const { data: newSchedule, error: newScheduleError } = await tourSchema
         .from("tour_schedules")
         .insert({
           tour_id: tour_id,
@@ -183,7 +186,7 @@ serve(async (req) => {
     }
 
     // Decrement seats
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await tourSchema
       .from("tour_schedules")
       .update({ seats_available: schedule.seats_available - seats_booked })
       .eq("id", schedule.id);
@@ -191,7 +194,7 @@ serve(async (req) => {
     if (updateError) throw updateError;
 
     // Create pending booking
-    const { data: booking, error: bookingError } = await supabaseAdmin
+    const { data: booking, error: bookingError } = await tourSchema
       .from("bookings")
       .insert({
         tour_schedule_id: schedule.id,
@@ -233,6 +236,7 @@ serve(async (req) => {
 
     // Create payment record
     const { error: paymentError } = await supabaseAdmin
+      .schema("billing")
       .from("payments")
       .insert({
         booking_id: booking.id,
