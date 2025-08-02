@@ -362,22 +362,6 @@ CREATE TABLE "public"."legacy_users" (
 -- ### 3. FUNCTIONS
 -- #############################################################################
 
-CREATE OR REPLACE FUNCTION "account"."handle_new_user"() RETURNS trigger
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-BEGIN
-  INSERT INTO account.profiles (id, first_name, last_name, role)
-  VALUES (
-    new.id,
-    new.raw_user_meta_data->>'first_name',
-    new.raw_user_meta_data->>'last_name',
-    'customer'::public.app_role -- Assign the default role of 'customer'.
-  );
-  RETURN new;
-END;
-$$;
-
 CREATE OR REPLACE FUNCTION "public"."get_server_time"() RETURNS json
     LANGUAGE "plpgsql"
     AS $$
@@ -395,15 +379,19 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION "public"."user_has_role"(required_roles public.app_role[]) RETURNS boolean
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    AS $$
+CREATE OR REPLACE FUNCTION public.user_has_role(required_roles public.app_role[])
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE
+AS $function$
   SELECT EXISTS (
     SELECT 1
     FROM account.profiles
-    WHERE id = auth.uid() AND role = ANY(required_roles)
+    WHERE id = auth.uid()
+      AND role = ANY(required_roles)
   );
-$$;
+$function$
+;
 
 CREATE OR REPLACE FUNCTION "tour"."handle_expired_bookings"() RETURNS "void"
     LANGUAGE "plpgsql"
@@ -512,6 +500,10 @@ WITH (security_invoker = on) AS
     updated_at
    FROM tour.tours
   WHERE (is_deleted = false);
+
+  -- A primary key is required for an entity to be reflected in the GraphQL schema (https://supabase.com/docs/guides/graphql/views)
+  COMMENT ON VIEW "internal_api"."tour_lists"
+  IS $$@graphql({"primary_key_columns": ["id"]})$$;
 
   CREATE OR REPLACE VIEW "internal_api"."tour_management" AS
    SELECT t.id,
@@ -681,10 +673,98 @@ ALTER TABLE ONLY "tour"."wishlists" ADD CONSTRAINT "wishlists_user_id_fkey" FORE
 -- ### 8. TRIGGERS
 -- #############################################################################
 
+CREATE OR REPLACE FUNCTION "account"."handle_new_user"() RETURNS trigger
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  INSERT INTO account.profiles (id, first_name, last_name, role)
+  VALUES (
+    new.id,
+    new.raw_user_meta_data->>'first_name',
+    new.raw_user_meta_data->>'last_name',
+    'customer'::public.app_role -- Assign the default role of 'customer'.
+  );
+  RETURN new;
+END;
+$$;
+
+-- Returns true if the currently-authenticated user’s own row in account.profiles has role = 'admin'
+CREATE OR REPLACE FUNCTION public.caller_is_admin()
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT (SELECT role = 'admin'
+          FROM account.profiles
+          WHERE id = auth.uid());
+$$;
+
+create or replace function account.check_admin_only_cols()
+returns trigger
+language plpgsql as
+$$
+declare
+  caller_role public.app_role;
+begin
+  -- Who is doing this?
+  select role into caller_role
+  from account.profiles
+  where id = auth.uid();
+
+  if caller_role <> 'admin' then
+    raise exception 'only admin can modify partner_id or is_active';
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function account.check_role_update()
+returns trigger
+language plpgsql as
+$$
+declare
+  caller_role public.app_role;
+begin
+  -- If role is not being changed, do nothing
+  if new.role is not distinct from old.role then
+    return new;
+  end if;
+
+  -- Who is doing this?
+  select role into caller_role
+  from account.profiles
+  where id = auth.uid();
+
+  case caller_role
+    when 'admin' then
+      if new.role = 'admin' then
+        raise exception 'admin role may not be assigned';
+      end if;
+    when 'partner_admin' then
+      if new.role not in ('guide','lead_guide') then
+        raise exception 'partner_admin may only assign guide or lead_guide';
+      end if;
+    else
+      raise exception 'insufficient privilege to change role';
+  end case;
+
+  return new;
+end;
+$$;
+
 CREATE TRIGGER "on_auth_user_created" AFTER INSERT ON "auth"."users" FOR EACH ROW EXECUTE FUNCTION "account"."handle_new_user"();
 CREATE TRIGGER "tours_updated_at_trigger" BEFORE UPDATE ON "tour"."tours" FOR EACH ROW EXECUTE FUNCTION "tour"."update_tours_updated_at"();
 CREATE TRIGGER "update_timezones_updated_at" BEFORE UPDATE ON "geography"."timezones" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
+create trigger trg_check_admin_only_cols
+before update of partner_id, is_active on account.profiles
+for each row
+execute function account.check_admin_only_cols();
+
+create trigger trg_check_role_update
+before update of role on account.profiles
+for each row
+execute function account.check_role_update();
 
 -- #############################################################################
 -- ### 9. ROW LEVEL SECURITY (RLS) & POLICIES
@@ -712,11 +792,31 @@ ALTER TABLE "tour"."tour_schedules" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "tour"."tours" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "tour"."wishlists" ENABLE ROW LEVEL SECURITY;
 
--- Create Policies
+-- Row insertion and deletion are prohibited due each rows are generated automatically by on_auth_user_created trigger that execute handle_new_user()
 CREATE POLICY "deny_delete_profiles" ON "account"."profiles" FOR DELETE TO "authenticated" USING (false);
 CREATE POLICY "deny_insert_profiles" ON "account"."profiles" FOR INSERT TO "authenticated" WITH CHECK (false);
-CREATE POLICY "profiles_select_admin_or_self" ON "account"."profiles" FOR SELECT TO "authenticated" USING (((public.user_has_role(ARRAY['admin'::public.app_role]) OR (id = auth.uid()))));
-CREATE POLICY "profiles_update_admin_or_self" ON "account"."profiles" FOR UPDATE TO "authenticated" USING (((public.user_has_role(ARRAY['admin'::public.app_role]) OR (id = auth.uid())))) WITH CHECK (((public.user_has_role(ARRAY['admin'::public.app_role]) OR (id = auth.uid()))));
+
+-- SELECT
+CREATE POLICY "profiles_select_all_if_admin"
+ON account.profiles
+FOR SELECT
+TO authenticated
+USING (public.caller_is_admin() OR id = auth.uid());
+
+-- UPDATE
+CREATE POLICY "profiles_update_owner"
+ON account.profiles
+FOR UPDATE
+TO authenticated
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "profiles_update_admin"
+ON account.profiles
+FOR UPDATE
+TO authenticated
+USING (public.caller_is_admin());
+
 CREATE POLICY "availability_exceptions_delete_policy" ON "tour"."availability_exceptions" FOR DELETE TO "authenticated" USING (((EXISTS ( SELECT 1
    FROM account.profiles p
   WHERE ((p.id = auth.uid()) AND (p.partner_id = availability_exceptions.partner_id) AND (p.role = 'partner_admin'::public.app_role)))) OR (EXISTS ( SELECT 1
@@ -960,6 +1060,11 @@ GRANT ALL ON TABLE "tour"."tours" TO "service_role";
 GRANT ALL ON TABLE "tour"."wishlists" TO "authenticated";
 GRANT ALL ON TABLE "tour"."wishlists" TO "service_role";
 
+GRANT USAGE ON SCHEMA account TO authenticated;
+GRANT USAGE ON SCHEMA billing TO authenticated;
+GRANT USAGE ON SCHEMA geography TO authenticated;
+GRANT USAGE ON SCHEMA tour TO authenticated;
+
 -- #############################################################################
 -- ### 11. API PERMISSIONS
 -- #############################################################################
@@ -985,3 +1090,9 @@ GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA internal_api
 GRANT USAGE, SELECT ON SEQUENCES TO anon, authenticated, service_role;
+
+-- Mandatory for GraphQL expose: Grant all necessary permissions to service_role for the view
+GRANT SELECT, INSERT, UPDATE, DELETE ON "internal_api"."tour_lists" TO service_role;
+
+-- Mandatory for GraphQL expose: This might be needed also to grant usage on the schema itself if not already done
+GRANT USAGE ON SCHEMA "internal_api" TO service_role;
