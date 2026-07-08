@@ -9,74 +9,74 @@
 * 🟢 You can import this file directly.
 */
 
-export const aal_level = {
+export const AalLevel = {
   aal1: 'aal1',
   aal2: 'aal2',
   aal3: 'aal3'
 } as const
 
-export type aal_level = (typeof aal_level)[keyof typeof aal_level]
+export type AalLevel = (typeof AalLevel)[keyof typeof AalLevel]
 
 
-export const code_challenge_method = {
+export const CodeChallengeMethod = {
   s256: 's256',
   plain: 'plain'
 } as const
 
-export type code_challenge_method = (typeof code_challenge_method)[keyof typeof code_challenge_method]
+export type CodeChallengeMethod = (typeof CodeChallengeMethod)[keyof typeof CodeChallengeMethod]
 
 
-export const factor_status = {
+export const FactorStatus = {
   unverified: 'unverified',
   verified: 'verified'
 } as const
 
-export type factor_status = (typeof factor_status)[keyof typeof factor_status]
+export type FactorStatus = (typeof FactorStatus)[keyof typeof FactorStatus]
 
 
-export const factor_type = {
+export const FactorType = {
   totp: 'totp',
   webauthn: 'webauthn',
   phone: 'phone'
 } as const
 
-export type factor_type = (typeof factor_type)[keyof typeof factor_type]
+export type FactorType = (typeof FactorType)[keyof typeof FactorType]
 
 
-export const oauth_authorization_status = {
+export const OauthAuthorizationStatus = {
   pending: 'pending',
   approved: 'approved',
   denied: 'denied',
   expired: 'expired'
 } as const
 
-export type oauth_authorization_status = (typeof oauth_authorization_status)[keyof typeof oauth_authorization_status]
+export type OauthAuthorizationStatus = (typeof OauthAuthorizationStatus)[keyof typeof OauthAuthorizationStatus]
 
 
-export const oauth_client_type = {
+export const OauthClientType = {
   public: 'public',
   confidential: 'confidential'
 } as const
 
-export type oauth_client_type = (typeof oauth_client_type)[keyof typeof oauth_client_type]
+export type OauthClientType = (typeof OauthClientType)[keyof typeof OauthClientType]
 
 
-export const oauth_registration_type = {
+export const OauthRegistrationType = {
   dynamic: 'dynamic',
   manual: 'manual'
 } as const
 
-export type oauth_registration_type = (typeof oauth_registration_type)[keyof typeof oauth_registration_type]
+export type OauthRegistrationType = (typeof OauthRegistrationType)[keyof typeof OauthRegistrationType]
 
 
-export const oauth_response_type = {
+export const OauthResponseType = {
   code: 'code'
 } as const
 
-export type oauth_response_type = (typeof oauth_response_type)[keyof typeof oauth_response_type]
+export type OauthResponseType = (typeof OauthResponseType)[keyof typeof OauthResponseType]
 
 
-export const one_time_token_type = {
+export const OneTimeTokenType = {
   confirmation_token: 'confirmation_token',
   reauthentication_token: 'reauthentication_token',
   recovery_token: 'recovery_token',
@@ -85,64 +85,72 @@ export const one_time_token_type = {
   phone_change_token: 'phone_change_token'
 } as const
 
-export type one_time_token_type = (typeof one_time_token_type)[keyof typeof one_time_token_type]
+export type OneTimeTokenType = (typeof OneTimeTokenType)[keyof typeof OneTimeTokenType]
 
 
-export const app_role = {
-  customer: 'customer',
-  guide: 'guide',
-  lead_guide: 'lead_guide',
-  admin: 'admin',
-  partner_admin: 'partner_admin'
+export const AppRole = {
+  CUSTOMER: 'CUSTOMER',
+  GUIDE: 'GUIDE',
+  LEAD_GUIDE: 'LEAD_GUIDE',
+  ADMIN: 'ADMIN',
+  PARTNER_ADMIN: 'PARTNER_ADMIN'
 } as const
 
-export type app_role = (typeof app_role)[keyof typeof app_role]
+export type AppRole = (typeof AppRole)[keyof typeof AppRole]
 
 
-export const booking_status = {
-  pending: 'pending',
-  confirmed: 'confirmed',
-  cancelled: 'cancelled',
-  expired: 'expired'
+export const BookingStatus = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED'
 } as const
 
-export type booking_status = (typeof booking_status)[keyof typeof booking_status]
+export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus]
 
 
-export const location_level = {
-  country: 'country',
-  province: 'province',
-  city: 'city',
-  district: 'district',
-  sub_district: 'sub_district',
-  point_of_interest: 'point_of_interest'
+export const LocationLevel = {
+  COUNTRY: 'COUNTRY',
+  PROVINCE: 'PROVINCE',
+  CITY: 'CITY',
+  DISTRICT: 'DISTRICT',
+  SUB_DISTRICT: 'SUB_DISTRICT',
+  POINT_OF_INTEREST: 'POINT_OF_INTEREST'
 } as const
 
-export type location_level = (typeof location_level)[keyof typeof location_level]
+export type LocationLevel = (typeof LocationLevel)[keyof typeof LocationLevel]
 
 
-export const payment_status = {
-  pending: 'pending',
-  succeeded: 'succeeded',
-  failed: 'failed'
+export const PaymentStatus = {
+  PENDING: 'PENDING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED'
 } as const
 
-export type payment_status = (typeof payment_status)[keyof typeof payment_status]
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
 
 
-export const tour_difficulty = {
-  easy: 'easy',
-  medium: 'medium',
-  difficult: 'difficult'
+export const TourDifficulty = {
+  EASY: 'EASY',
+  MEDIUM: 'MEDIUM',
+  DIFFICULT: 'DIFFICULT'
 } as const
 
-export type tour_difficulty = (typeof tour_difficulty)[keyof typeof tour_difficulty]
+export type TourDifficulty = (typeof TourDifficulty)[keyof typeof TourDifficulty]
 
 
-export const tour_status = {
-  coming_soon: 'coming_soon',
-  draft: 'draft',
-  live: 'live'
+export const TourStatus = {
+  COMING_SOON: 'COMING_SOON',
+  DRAFT: 'DRAFT',
+  LIVE: 'LIVE'
 } as const
 
-export type tour_status = (typeof tour_status)[keyof typeof tour_status]
+export type TourStatus = (typeof TourStatus)[keyof typeof TourStatus]
+
+
+export const MediaType = {
+  IMAGE: 'IMAGE',
+  VIDEO: 'VIDEO'
+} as const
+
+export type MediaType = (typeof MediaType)[keyof typeof MediaType]

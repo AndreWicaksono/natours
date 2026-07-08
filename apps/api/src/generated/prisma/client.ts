@@ -29,8 +29,8 @@ export * from "./enums.js"
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more Audit_log_entries
- * const audit_log_entries = await prisma.audit_log_entries.findMany()
+ * // Fetch zero or more AuditLogEntries
+ * const auditLogEntries = await prisma.auditLogEntry.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -40,162 +40,222 @@ export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts exten
 export { Prisma }
 
 /**
- * Model audit_log_entries
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type audit_log_entries = Prisma.audit_log_entriesModel
-/**
- * Model custom_oauth_providers
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- */
-export type custom_oauth_providers = Prisma.custom_oauth_providersModel
-/**
- * Model flow_state
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type flow_state = Prisma.flow_stateModel
-/**
- * Model identities
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type identities = Prisma.identitiesModel
-/**
- * Model instances
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type instances = Prisma.instancesModel
-/**
- * Model mfa_amr_claims
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type mfa_amr_claims = Prisma.mfa_amr_claimsModel
-/**
- * Model mfa_challenges
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type mfa_challenges = Prisma.mfa_challengesModel
-/**
- * Model mfa_factors
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type mfa_factors = Prisma.mfa_factorsModel
-/**
- * Model oauth_authorizations
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- */
-export type oauth_authorizations = Prisma.oauth_authorizationsModel
-/**
- * Model oauth_client_states
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- */
-export type oauth_client_states = Prisma.oauth_client_statesModel
-/**
- * Model oauth_clients
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- */
-export type oauth_clients = Prisma.oauth_clientsModel
-/**
- * Model oauth_consents
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- */
-export type oauth_consents = Prisma.oauth_consentsModel
-/**
- * Model one_time_tokens
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type one_time_tokens = Prisma.one_time_tokensModel
-/**
- * Model refresh_tokens
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type refresh_tokens = Prisma.refresh_tokensModel
-/**
- * Model saml_providers
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type saml_providers = Prisma.saml_providersModel
-/**
- * Model saml_relay_states
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type saml_relay_states = Prisma.saml_relay_statesModel
-/**
- * Model schema_migrations
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type schema_migrations = Prisma.schema_migrationsModel
-/**
- * Model sessions
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- */
-export type sessions = Prisma.sessionsModel
-/**
- * Model sso_domains
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- * This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
- */
-export type sso_domains = Prisma.sso_domainsModel
-/**
- * Model sso_providers
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- * This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
- */
-export type sso_providers = Prisma.sso_providersModel
-/**
- * Model users
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- * This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
- * This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
- */
-export type users = Prisma.usersModel
-/**
- * Model webauthn_challenges
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
- */
-export type webauthn_challenges = Prisma.webauthn_challengesModel
-/**
- * Model webauthn_credentials
+ * Model AuditLogEntry
  * 
  */
-export type webauthn_credentials = Prisma.webauthn_credentialsModel
+export type AuditLogEntry = Prisma.AuditLogEntryModel
 /**
- * Model legacy_staffs
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+ * Model CustomOauthProvider
+ * 
  */
-export type legacy_staffs = Prisma.legacy_staffsModel
+export type CustomOauthProvider = Prisma.CustomOauthProviderModel
 /**
- * Model legacy_tours
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+ * Model FlowState
+ * 
  */
-export type legacy_tours = Prisma.legacy_toursModel
+export type FlowState = Prisma.FlowStateModel
 /**
- * Model legacy_users
- * This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+ * Model Identity
+ * 
  */
-export type legacy_users = Prisma.legacy_usersModel
+export type Identity = Prisma.IdentityModel
 /**
- * Model spatial_ref_sys
- * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+ * Model Instance
+ * 
  */
-export type spatial_ref_sys = Prisma.spatial_ref_sysModel
+export type Instance = Prisma.InstanceModel
+/**
+ * Model MfaAmrClaim
+ * 
+ */
+export type MfaAmrClaim = Prisma.MfaAmrClaimModel
+/**
+ * Model MfaChallenge
+ * 
+ */
+export type MfaChallenge = Prisma.MfaChallengeModel
+/**
+ * Model MfaFactor
+ * 
+ */
+export type MfaFactor = Prisma.MfaFactorModel
+/**
+ * Model OauthAuthorization
+ * 
+ */
+export type OauthAuthorization = Prisma.OauthAuthorizationModel
+/**
+ * Model OauthClientState
+ * 
+ */
+export type OauthClientState = Prisma.OauthClientStateModel
+/**
+ * Model OauthClient
+ * 
+ */
+export type OauthClient = Prisma.OauthClientModel
+/**
+ * Model OauthConsent
+ * 
+ */
+export type OauthConsent = Prisma.OauthConsentModel
+/**
+ * Model OneTimeToken
+ * 
+ */
+export type OneTimeToken = Prisma.OneTimeTokenModel
+/**
+ * Model RefreshToken
+ * 
+ */
+export type RefreshToken = Prisma.RefreshTokenModel
+/**
+ * Model SamlProvider
+ * 
+ */
+export type SamlProvider = Prisma.SamlProviderModel
+/**
+ * Model SamlRelayState
+ * 
+ */
+export type SamlRelayState = Prisma.SamlRelayStateModel
+/**
+ * Model SchemaMigration
+ * 
+ */
+export type SchemaMigration = Prisma.SchemaMigrationModel
+/**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
+/**
+ * Model SsoDomain
+ * 
+ */
+export type SsoDomain = Prisma.SsoDomainModel
+/**
+ * Model SsoProvider
+ * 
+ */
+export type SsoProvider = Prisma.SsoProviderModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model WebauthnChallenge
+ * 
+ */
+export type WebauthnChallenge = Prisma.WebauthnChallengeModel
+/**
+ * Model WebauthnCredential
+ * 
+ */
+export type WebauthnCredential = Prisma.WebauthnCredentialModel
+/**
+ * Model LegacyStaff
+ * 
+ */
+export type LegacyStaff = Prisma.LegacyStaffModel
+/**
+ * Model LegacyTour
+ * 
+ */
+export type LegacyTour = Prisma.LegacyTourModel
+/**
+ * Model LegacyUser
+ * 
+ */
+export type LegacyUser = Prisma.LegacyUserModel
+/**
+ * Model SpatialRefSys
+ * 
+ */
+export type SpatialRefSys = Prisma.SpatialRefSysModel
+/**
+ * Model Profile
+ * 
+ */
+export type Profile = Prisma.ProfileModel
+/**
+ * Model Payment
+ * 
+ */
+export type Payment = Prisma.PaymentModel
+/**
+ * Model StripeWebhookEvent
+ * 
+ */
+export type StripeWebhookEvent = Prisma.StripeWebhookEventModel
+/**
+ * Model LocationTimezone
+ * 
+ */
+export type LocationTimezone = Prisma.LocationTimezoneModel
+/**
+ * Model Location
+ * 
+ */
+export type Location = Prisma.LocationModel
+/**
+ * Model Timezone
+ * 
+ */
+export type Timezone = Prisma.TimezoneModel
+/**
+ * Model AvailabilityException
+ * 
+ */
+export type AvailabilityException = Prisma.AvailabilityExceptionModel
+/**
+ * Model AvailabilityRule
+ * 
+ */
+export type AvailabilityRule = Prisma.AvailabilityRuleModel
+/**
+ * Model Booking
+ * 
+ */
+export type Booking = Prisma.BookingModel
+/**
+ * Model Partner
+ * 
+ */
+export type Partner = Prisma.PartnerModel
+/**
+ * Model Review
+ * 
+ */
+export type Review = Prisma.ReviewModel
+/**
+ * Model TourGuide
+ * 
+ */
+export type TourGuide = Prisma.TourGuideModel
+/**
+ * Model TourLocation
+ * 
+ */
+export type TourLocation = Prisma.TourLocationModel
+/**
+ * Model TourMedia
+ * 
+ */
+export type TourMedia = Prisma.TourMediaModel
+/**
+ * Model TourSchedule
+ * 
+ */
+export type TourSchedule = Prisma.TourScheduleModel
+/**
+ * Model Tour
+ * 
+ */
+export type Tour = Prisma.TourModel
+/**
+ * Model Wishlist
+ * 
+ */
+export type Wishlist = Prisma.WishlistModel

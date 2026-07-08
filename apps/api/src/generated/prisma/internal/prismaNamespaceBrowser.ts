@@ -51,33 +51,50 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  audit_log_entries: 'audit_log_entries',
-  custom_oauth_providers: 'custom_oauth_providers',
-  flow_state: 'flow_state',
-  identities: 'identities',
-  instances: 'instances',
-  mfa_amr_claims: 'mfa_amr_claims',
-  mfa_challenges: 'mfa_challenges',
-  mfa_factors: 'mfa_factors',
-  oauth_authorizations: 'oauth_authorizations',
-  oauth_client_states: 'oauth_client_states',
-  oauth_clients: 'oauth_clients',
-  oauth_consents: 'oauth_consents',
-  one_time_tokens: 'one_time_tokens',
-  refresh_tokens: 'refresh_tokens',
-  saml_providers: 'saml_providers',
-  saml_relay_states: 'saml_relay_states',
-  schema_migrations: 'schema_migrations',
-  sessions: 'sessions',
-  sso_domains: 'sso_domains',
-  sso_providers: 'sso_providers',
-  users: 'users',
-  webauthn_challenges: 'webauthn_challenges',
-  webauthn_credentials: 'webauthn_credentials',
-  legacy_staffs: 'legacy_staffs',
-  legacy_tours: 'legacy_tours',
-  legacy_users: 'legacy_users',
-  spatial_ref_sys: 'spatial_ref_sys'
+  AuditLogEntry: 'AuditLogEntry',
+  CustomOauthProvider: 'CustomOauthProvider',
+  FlowState: 'FlowState',
+  Identity: 'Identity',
+  Instance: 'Instance',
+  MfaAmrClaim: 'MfaAmrClaim',
+  MfaChallenge: 'MfaChallenge',
+  MfaFactor: 'MfaFactor',
+  OauthAuthorization: 'OauthAuthorization',
+  OauthClientState: 'OauthClientState',
+  OauthClient: 'OauthClient',
+  OauthConsent: 'OauthConsent',
+  OneTimeToken: 'OneTimeToken',
+  RefreshToken: 'RefreshToken',
+  SamlProvider: 'SamlProvider',
+  SamlRelayState: 'SamlRelayState',
+  SchemaMigration: 'SchemaMigration',
+  Session: 'Session',
+  SsoDomain: 'SsoDomain',
+  SsoProvider: 'SsoProvider',
+  User: 'User',
+  WebauthnChallenge: 'WebauthnChallenge',
+  WebauthnCredential: 'WebauthnCredential',
+  LegacyStaff: 'LegacyStaff',
+  LegacyTour: 'LegacyTour',
+  LegacyUser: 'LegacyUser',
+  SpatialRefSys: 'SpatialRefSys',
+  Profile: 'Profile',
+  Payment: 'Payment',
+  StripeWebhookEvent: 'StripeWebhookEvent',
+  LocationTimezone: 'LocationTimezone',
+  Location: 'Location',
+  Timezone: 'Timezone',
+  AvailabilityException: 'AvailabilityException',
+  AvailabilityRule: 'AvailabilityRule',
+  Booking: 'Booking',
+  Partner: 'Partner',
+  Review: 'Review',
+  TourGuide: 'TourGuide',
+  TourLocation: 'TourLocation',
+  TourMedia: 'TourMedia',
+  TourSchedule: 'TourSchedule',
+  Tour: 'Tour',
+  Wishlist: 'Wishlist'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -96,399 +113,399 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
-export const Audit_log_entriesScalarFieldEnum = {
-  instance_id: 'instance_id',
+export const AuditLogEntryScalarFieldEnum = {
+  instanceId: 'instanceId',
   id: 'id',
   payload: 'payload',
-  created_at: 'created_at',
-  ip_address: 'ip_address'
+  createdAt: 'createdAt',
+  ipAddress: 'ipAddress'
 } as const
 
-export type Audit_log_entriesScalarFieldEnum = (typeof Audit_log_entriesScalarFieldEnum)[keyof typeof Audit_log_entriesScalarFieldEnum]
+export type AuditLogEntryScalarFieldEnum = (typeof AuditLogEntryScalarFieldEnum)[keyof typeof AuditLogEntryScalarFieldEnum]
 
 
-export const Custom_oauth_providersScalarFieldEnum = {
+export const CustomOauthProviderScalarFieldEnum = {
   id: 'id',
-  provider_type: 'provider_type',
+  providerType: 'providerType',
   identifier: 'identifier',
   name: 'name',
-  client_id: 'client_id',
-  client_secret: 'client_secret',
-  acceptable_client_ids: 'acceptable_client_ids',
+  clientId: 'clientId',
+  clientSecret: 'clientSecret',
+  acceptableClientIds: 'acceptableClientIds',
   scopes: 'scopes',
-  pkce_enabled: 'pkce_enabled',
-  attribute_mapping: 'attribute_mapping',
-  authorization_params: 'authorization_params',
+  pkceEnabled: 'pkceEnabled',
+  attributeMapping: 'attributeMapping',
+  authorizationParams: 'authorizationParams',
   enabled: 'enabled',
-  email_optional: 'email_optional',
+  emailOptional: 'emailOptional',
   issuer: 'issuer',
-  discovery_url: 'discovery_url',
-  skip_nonce_check: 'skip_nonce_check',
-  cached_discovery: 'cached_discovery',
-  discovery_cached_at: 'discovery_cached_at',
-  authorization_url: 'authorization_url',
-  token_url: 'token_url',
-  userinfo_url: 'userinfo_url',
-  jwks_uri: 'jwks_uri',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  custom_claims_allowlist: 'custom_claims_allowlist'
+  discoveryUrl: 'discoveryUrl',
+  skipNonceCheck: 'skipNonceCheck',
+  cachedDiscovery: 'cachedDiscovery',
+  discoveryCachedAt: 'discoveryCachedAt',
+  authorizationUrl: 'authorizationUrl',
+  tokenUrl: 'tokenUrl',
+  userinfoUrl: 'userinfoUrl',
+  jwksUri: 'jwksUri',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  customClaimsAllowlist: 'customClaimsAllowlist'
 } as const
 
-export type Custom_oauth_providersScalarFieldEnum = (typeof Custom_oauth_providersScalarFieldEnum)[keyof typeof Custom_oauth_providersScalarFieldEnum]
+export type CustomOauthProviderScalarFieldEnum = (typeof CustomOauthProviderScalarFieldEnum)[keyof typeof CustomOauthProviderScalarFieldEnum]
 
 
-export const Flow_stateScalarFieldEnum = {
+export const FlowStateScalarFieldEnum = {
   id: 'id',
-  user_id: 'user_id',
-  auth_code: 'auth_code',
-  code_challenge_method: 'code_challenge_method',
-  code_challenge: 'code_challenge',
-  provider_type: 'provider_type',
-  provider_access_token: 'provider_access_token',
-  provider_refresh_token: 'provider_refresh_token',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  authentication_method: 'authentication_method',
-  auth_code_issued_at: 'auth_code_issued_at',
-  invite_token: 'invite_token',
+  userId: 'userId',
+  authCode: 'authCode',
+  codeChallengeMethod: 'codeChallengeMethod',
+  codeChallenge: 'codeChallenge',
+  providerType: 'providerType',
+  providerAccessToken: 'providerAccessToken',
+  providerRefreshToken: 'providerRefreshToken',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  authenticationMethod: 'authenticationMethod',
+  authCodeIssuedAt: 'authCodeIssuedAt',
+  inviteToken: 'inviteToken',
   referrer: 'referrer',
-  oauth_client_state_id: 'oauth_client_state_id',
-  linking_target_id: 'linking_target_id',
-  email_optional: 'email_optional'
+  oauthClientStateId: 'oauthClientStateId',
+  linkingTargetId: 'linkingTargetId',
+  emailOptional: 'emailOptional'
 } as const
 
-export type Flow_stateScalarFieldEnum = (typeof Flow_stateScalarFieldEnum)[keyof typeof Flow_stateScalarFieldEnum]
+export type FlowStateScalarFieldEnum = (typeof FlowStateScalarFieldEnum)[keyof typeof FlowStateScalarFieldEnum]
 
 
-export const IdentitiesScalarFieldEnum = {
-  provider_id: 'provider_id',
-  user_id: 'user_id',
-  identity_data: 'identity_data',
+export const IdentityScalarFieldEnum = {
+  providerId: 'providerId',
+  userId: 'userId',
+  identityData: 'identityData',
   provider: 'provider',
-  last_sign_in_at: 'last_sign_in_at',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
+  lastSignInAt: 'lastSignInAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   email: 'email',
   id: 'id'
 } as const
 
-export type IdentitiesScalarFieldEnum = (typeof IdentitiesScalarFieldEnum)[keyof typeof IdentitiesScalarFieldEnum]
+export type IdentityScalarFieldEnum = (typeof IdentityScalarFieldEnum)[keyof typeof IdentityScalarFieldEnum]
 
 
-export const InstancesScalarFieldEnum = {
+export const InstanceScalarFieldEnum = {
   id: 'id',
   uuid: 'uuid',
-  raw_base_config: 'raw_base_config',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
+  rawBaseConfig: 'rawBaseConfig',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
-export type InstancesScalarFieldEnum = (typeof InstancesScalarFieldEnum)[keyof typeof InstancesScalarFieldEnum]
+export type InstanceScalarFieldEnum = (typeof InstanceScalarFieldEnum)[keyof typeof InstanceScalarFieldEnum]
 
 
-export const Mfa_amr_claimsScalarFieldEnum = {
-  session_id: 'session_id',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  authentication_method: 'authentication_method',
+export const MfaAmrClaimScalarFieldEnum = {
+  sessionId: 'sessionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  authenticationMethod: 'authenticationMethod',
   id: 'id'
 } as const
 
-export type Mfa_amr_claimsScalarFieldEnum = (typeof Mfa_amr_claimsScalarFieldEnum)[keyof typeof Mfa_amr_claimsScalarFieldEnum]
+export type MfaAmrClaimScalarFieldEnum = (typeof MfaAmrClaimScalarFieldEnum)[keyof typeof MfaAmrClaimScalarFieldEnum]
 
 
-export const Mfa_challengesScalarFieldEnum = {
+export const MfaChallengeScalarFieldEnum = {
   id: 'id',
-  factor_id: 'factor_id',
-  created_at: 'created_at',
-  verified_at: 'verified_at',
-  ip_address: 'ip_address',
-  otp_code: 'otp_code',
-  web_authn_session_data: 'web_authn_session_data'
+  factorId: 'factorId',
+  createdAt: 'createdAt',
+  verifiedAt: 'verifiedAt',
+  ipAddress: 'ipAddress',
+  otpCode: 'otpCode',
+  webAuthnSessionData: 'webAuthnSessionData'
 } as const
 
-export type Mfa_challengesScalarFieldEnum = (typeof Mfa_challengesScalarFieldEnum)[keyof typeof Mfa_challengesScalarFieldEnum]
+export type MfaChallengeScalarFieldEnum = (typeof MfaChallengeScalarFieldEnum)[keyof typeof MfaChallengeScalarFieldEnum]
 
 
-export const Mfa_factorsScalarFieldEnum = {
+export const MfaFactorScalarFieldEnum = {
   id: 'id',
-  user_id: 'user_id',
-  friendly_name: 'friendly_name',
-  factor_type: 'factor_type',
+  userId: 'userId',
+  friendlyName: 'friendlyName',
+  factorType: 'factorType',
   status: 'status',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   secret: 'secret',
   phone: 'phone',
-  last_challenged_at: 'last_challenged_at',
-  web_authn_credential: 'web_authn_credential',
-  web_authn_aaguid: 'web_authn_aaguid',
-  last_webauthn_challenge_data: 'last_webauthn_challenge_data'
+  lastChallengedAt: 'lastChallengedAt',
+  webAuthnCredential: 'webAuthnCredential',
+  webAuthnAaguid: 'webAuthnAaguid',
+  lastWebauthnChallengeData: 'lastWebauthnChallengeData'
 } as const
 
-export type Mfa_factorsScalarFieldEnum = (typeof Mfa_factorsScalarFieldEnum)[keyof typeof Mfa_factorsScalarFieldEnum]
+export type MfaFactorScalarFieldEnum = (typeof MfaFactorScalarFieldEnum)[keyof typeof MfaFactorScalarFieldEnum]
 
 
-export const Oauth_authorizationsScalarFieldEnum = {
+export const OauthAuthorizationScalarFieldEnum = {
   id: 'id',
-  authorization_id: 'authorization_id',
-  client_id: 'client_id',
-  user_id: 'user_id',
-  redirect_uri: 'redirect_uri',
+  authorizationId: 'authorizationId',
+  clientId: 'clientId',
+  userId: 'userId',
+  redirectUri: 'redirectUri',
   scope: 'scope',
   state: 'state',
   resource: 'resource',
-  code_challenge: 'code_challenge',
-  code_challenge_method: 'code_challenge_method',
-  response_type: 'response_type',
+  codeChallenge: 'codeChallenge',
+  codeChallengeMethod: 'codeChallengeMethod',
+  responseType: 'responseType',
   status: 'status',
-  authorization_code: 'authorization_code',
-  created_at: 'created_at',
-  expires_at: 'expires_at',
-  approved_at: 'approved_at',
+  authorizationCode: 'authorizationCode',
+  createdAt: 'createdAt',
+  expiresAt: 'expiresAt',
+  approvedAt: 'approvedAt',
   nonce: 'nonce'
 } as const
 
-export type Oauth_authorizationsScalarFieldEnum = (typeof Oauth_authorizationsScalarFieldEnum)[keyof typeof Oauth_authorizationsScalarFieldEnum]
+export type OauthAuthorizationScalarFieldEnum = (typeof OauthAuthorizationScalarFieldEnum)[keyof typeof OauthAuthorizationScalarFieldEnum]
 
 
-export const Oauth_client_statesScalarFieldEnum = {
+export const OauthClientStateScalarFieldEnum = {
   id: 'id',
-  provider_type: 'provider_type',
-  code_verifier: 'code_verifier',
-  created_at: 'created_at'
+  providerType: 'providerType',
+  codeVerifier: 'codeVerifier',
+  createdAt: 'createdAt'
 } as const
 
-export type Oauth_client_statesScalarFieldEnum = (typeof Oauth_client_statesScalarFieldEnum)[keyof typeof Oauth_client_statesScalarFieldEnum]
+export type OauthClientStateScalarFieldEnum = (typeof OauthClientStateScalarFieldEnum)[keyof typeof OauthClientStateScalarFieldEnum]
 
 
-export const Oauth_clientsScalarFieldEnum = {
+export const OauthClientScalarFieldEnum = {
   id: 'id',
-  client_secret_hash: 'client_secret_hash',
-  registration_type: 'registration_type',
-  redirect_uris: 'redirect_uris',
-  grant_types: 'grant_types',
-  client_name: 'client_name',
-  client_uri: 'client_uri',
-  logo_uri: 'logo_uri',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  deleted_at: 'deleted_at',
-  client_type: 'client_type',
-  token_endpoint_auth_method: 'token_endpoint_auth_method'
+  clientSecretHash: 'clientSecretHash',
+  registrationType: 'registrationType',
+  redirectUris: 'redirectUris',
+  grantTypes: 'grantTypes',
+  clientName: 'clientName',
+  clientUri: 'clientUri',
+  logoUri: 'logoUri',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  deletedAt: 'deletedAt',
+  clientType: 'clientType',
+  tokenEndpointAuthMethod: 'tokenEndpointAuthMethod'
 } as const
 
-export type Oauth_clientsScalarFieldEnum = (typeof Oauth_clientsScalarFieldEnum)[keyof typeof Oauth_clientsScalarFieldEnum]
+export type OauthClientScalarFieldEnum = (typeof OauthClientScalarFieldEnum)[keyof typeof OauthClientScalarFieldEnum]
 
 
-export const Oauth_consentsScalarFieldEnum = {
+export const OauthConsentScalarFieldEnum = {
   id: 'id',
-  user_id: 'user_id',
-  client_id: 'client_id',
+  userId: 'userId',
+  clientId: 'clientId',
   scopes: 'scopes',
-  granted_at: 'granted_at',
-  revoked_at: 'revoked_at'
+  grantedAt: 'grantedAt',
+  revokedAt: 'revokedAt'
 } as const
 
-export type Oauth_consentsScalarFieldEnum = (typeof Oauth_consentsScalarFieldEnum)[keyof typeof Oauth_consentsScalarFieldEnum]
+export type OauthConsentScalarFieldEnum = (typeof OauthConsentScalarFieldEnum)[keyof typeof OauthConsentScalarFieldEnum]
 
 
-export const One_time_tokensScalarFieldEnum = {
+export const OneTimeTokenScalarFieldEnum = {
   id: 'id',
-  user_id: 'user_id',
-  token_type: 'token_type',
-  token_hash: 'token_hash',
-  relates_to: 'relates_to',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
+  userId: 'userId',
+  tokenType: 'tokenType',
+  tokenHash: 'tokenHash',
+  relatesTo: 'relatesTo',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
-export type One_time_tokensScalarFieldEnum = (typeof One_time_tokensScalarFieldEnum)[keyof typeof One_time_tokensScalarFieldEnum]
+export type OneTimeTokenScalarFieldEnum = (typeof OneTimeTokenScalarFieldEnum)[keyof typeof OneTimeTokenScalarFieldEnum]
 
 
-export const Refresh_tokensScalarFieldEnum = {
-  instance_id: 'instance_id',
+export const RefreshTokenScalarFieldEnum = {
+  instanceId: 'instanceId',
   id: 'id',
   token: 'token',
-  user_id: 'user_id',
+  userId: 'userId',
   revoked: 'revoked',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   parent: 'parent',
-  session_id: 'session_id'
+  sessionId: 'sessionId'
 } as const
 
-export type Refresh_tokensScalarFieldEnum = (typeof Refresh_tokensScalarFieldEnum)[keyof typeof Refresh_tokensScalarFieldEnum]
+export type RefreshTokenScalarFieldEnum = (typeof RefreshTokenScalarFieldEnum)[keyof typeof RefreshTokenScalarFieldEnum]
 
 
-export const Saml_providersScalarFieldEnum = {
+export const SamlProviderScalarFieldEnum = {
   id: 'id',
-  sso_provider_id: 'sso_provider_id',
-  entity_id: 'entity_id',
-  metadata_xml: 'metadata_xml',
-  metadata_url: 'metadata_url',
-  attribute_mapping: 'attribute_mapping',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  name_id_format: 'name_id_format'
+  ssoProviderId: 'ssoProviderId',
+  entityId: 'entityId',
+  metadataXml: 'metadataXml',
+  metadataUrl: 'metadataUrl',
+  attributeMapping: 'attributeMapping',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  nameIdFormat: 'nameIdFormat'
 } as const
 
-export type Saml_providersScalarFieldEnum = (typeof Saml_providersScalarFieldEnum)[keyof typeof Saml_providersScalarFieldEnum]
+export type SamlProviderScalarFieldEnum = (typeof SamlProviderScalarFieldEnum)[keyof typeof SamlProviderScalarFieldEnum]
 
 
-export const Saml_relay_statesScalarFieldEnum = {
+export const SamlRelayStateScalarFieldEnum = {
   id: 'id',
-  sso_provider_id: 'sso_provider_id',
-  request_id: 'request_id',
-  for_email: 'for_email',
-  redirect_to: 'redirect_to',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  flow_state_id: 'flow_state_id'
+  ssoProviderId: 'ssoProviderId',
+  requestId: 'requestId',
+  forEmail: 'forEmail',
+  redirectTo: 'redirectTo',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  flowStateId: 'flowStateId'
 } as const
 
-export type Saml_relay_statesScalarFieldEnum = (typeof Saml_relay_statesScalarFieldEnum)[keyof typeof Saml_relay_statesScalarFieldEnum]
+export type SamlRelayStateScalarFieldEnum = (typeof SamlRelayStateScalarFieldEnum)[keyof typeof SamlRelayStateScalarFieldEnum]
 
 
-export const Schema_migrationsScalarFieldEnum = {
+export const SchemaMigrationScalarFieldEnum = {
   version: 'version'
 } as const
 
-export type Schema_migrationsScalarFieldEnum = (typeof Schema_migrationsScalarFieldEnum)[keyof typeof Schema_migrationsScalarFieldEnum]
+export type SchemaMigrationScalarFieldEnum = (typeof SchemaMigrationScalarFieldEnum)[keyof typeof SchemaMigrationScalarFieldEnum]
 
 
-export const SessionsScalarFieldEnum = {
+export const SessionScalarFieldEnum = {
   id: 'id',
-  user_id: 'user_id',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  factor_id: 'factor_id',
+  userId: 'userId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  factorId: 'factorId',
   aal: 'aal',
-  not_after: 'not_after',
-  refreshed_at: 'refreshed_at',
-  user_agent: 'user_agent',
+  notAfter: 'notAfter',
+  refreshedAt: 'refreshedAt',
+  userAgent: 'userAgent',
   ip: 'ip',
   tag: 'tag',
-  oauth_client_id: 'oauth_client_id',
-  refresh_token_hmac_key: 'refresh_token_hmac_key',
-  refresh_token_counter: 'refresh_token_counter',
+  oauthClientId: 'oauthClientId',
+  refreshTokenHmacKey: 'refreshTokenHmacKey',
+  refreshTokenCounter: 'refreshTokenCounter',
   scopes: 'scopes'
 } as const
 
-export type SessionsScalarFieldEnum = (typeof SessionsScalarFieldEnum)[keyof typeof SessionsScalarFieldEnum]
+export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
 
 
-export const Sso_domainsScalarFieldEnum = {
+export const SsoDomainScalarFieldEnum = {
   id: 'id',
-  sso_provider_id: 'sso_provider_id',
+  ssoProviderId: 'ssoProviderId',
   domain: 'domain',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
-export type Sso_domainsScalarFieldEnum = (typeof Sso_domainsScalarFieldEnum)[keyof typeof Sso_domainsScalarFieldEnum]
+export type SsoDomainScalarFieldEnum = (typeof SsoDomainScalarFieldEnum)[keyof typeof SsoDomainScalarFieldEnum]
 
 
-export const Sso_providersScalarFieldEnum = {
+export const SsoProviderScalarFieldEnum = {
   id: 'id',
-  resource_id: 'resource_id',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
+  resourceId: 'resourceId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   disabled: 'disabled'
 } as const
 
-export type Sso_providersScalarFieldEnum = (typeof Sso_providersScalarFieldEnum)[keyof typeof Sso_providersScalarFieldEnum]
+export type SsoProviderScalarFieldEnum = (typeof SsoProviderScalarFieldEnum)[keyof typeof SsoProviderScalarFieldEnum]
 
 
-export const UsersScalarFieldEnum = {
-  instance_id: 'instance_id',
+export const UserScalarFieldEnum = {
+  instanceId: 'instanceId',
   id: 'id',
   aud: 'aud',
   role: 'role',
   email: 'email',
-  encrypted_password: 'encrypted_password',
-  email_confirmed_at: 'email_confirmed_at',
-  invited_at: 'invited_at',
-  confirmation_token: 'confirmation_token',
-  confirmation_sent_at: 'confirmation_sent_at',
-  recovery_token: 'recovery_token',
-  recovery_sent_at: 'recovery_sent_at',
-  email_change_token_new: 'email_change_token_new',
-  email_change: 'email_change',
-  email_change_sent_at: 'email_change_sent_at',
-  last_sign_in_at: 'last_sign_in_at',
-  raw_app_meta_data: 'raw_app_meta_data',
-  raw_user_meta_data: 'raw_user_meta_data',
-  is_super_admin: 'is_super_admin',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
+  encryptedPassword: 'encryptedPassword',
+  emailConfirmedAt: 'emailConfirmedAt',
+  invitedAt: 'invitedAt',
+  confirmationToken: 'confirmationToken',
+  confirmationSentAt: 'confirmationSentAt',
+  recoveryToken: 'recoveryToken',
+  recoverySentAt: 'recoverySentAt',
+  emailChangeTokenNew: 'emailChangeTokenNew',
+  emailChange: 'emailChange',
+  emailChangeSentAt: 'emailChangeSentAt',
+  lastSignInAt: 'lastSignInAt',
+  rawAppMetaData: 'rawAppMetaData',
+  rawUserMetaData: 'rawUserMetaData',
+  isSuperAdmin: 'isSuperAdmin',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   phone: 'phone',
-  phone_confirmed_at: 'phone_confirmed_at',
-  phone_change: 'phone_change',
-  phone_change_token: 'phone_change_token',
-  phone_change_sent_at: 'phone_change_sent_at',
-  confirmed_at: 'confirmed_at',
-  email_change_token_current: 'email_change_token_current',
-  email_change_confirm_status: 'email_change_confirm_status',
-  banned_until: 'banned_until',
-  reauthentication_token: 'reauthentication_token',
-  reauthentication_sent_at: 'reauthentication_sent_at',
-  is_sso_user: 'is_sso_user',
-  deleted_at: 'deleted_at',
-  is_anonymous: 'is_anonymous'
+  phoneConfirmedAt: 'phoneConfirmedAt',
+  phoneChange: 'phoneChange',
+  phoneChangeToken: 'phoneChangeToken',
+  phoneChangeSentAt: 'phoneChangeSentAt',
+  confirmedAt: 'confirmedAt',
+  emailChangeTokenCurrent: 'emailChangeTokenCurrent',
+  emailChangeConfirmStatus: 'emailChangeConfirmStatus',
+  bannedUntil: 'bannedUntil',
+  reauthenticationToken: 'reauthenticationToken',
+  reauthenticationSentAt: 'reauthenticationSentAt',
+  isSsoUser: 'isSsoUser',
+  deletedAt: 'deletedAt',
+  isAnonymous: 'isAnonymous'
 } as const
 
-export type UsersScalarFieldEnum = (typeof UsersScalarFieldEnum)[keyof typeof UsersScalarFieldEnum]
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
-export const Webauthn_challengesScalarFieldEnum = {
+export const WebauthnChallengeScalarFieldEnum = {
   id: 'id',
-  user_id: 'user_id',
-  challenge_type: 'challenge_type',
-  session_data: 'session_data',
-  created_at: 'created_at',
-  expires_at: 'expires_at'
+  userId: 'userId',
+  challengeType: 'challengeType',
+  sessionData: 'sessionData',
+  createdAt: 'createdAt',
+  expiresAt: 'expiresAt'
 } as const
 
-export type Webauthn_challengesScalarFieldEnum = (typeof Webauthn_challengesScalarFieldEnum)[keyof typeof Webauthn_challengesScalarFieldEnum]
+export type WebauthnChallengeScalarFieldEnum = (typeof WebauthnChallengeScalarFieldEnum)[keyof typeof WebauthnChallengeScalarFieldEnum]
 
 
-export const Webauthn_credentialsScalarFieldEnum = {
+export const WebauthnCredentialScalarFieldEnum = {
   id: 'id',
-  user_id: 'user_id',
-  credential_id: 'credential_id',
-  public_key: 'public_key',
-  attestation_type: 'attestation_type',
+  userId: 'userId',
+  credentialId: 'credentialId',
+  publicKey: 'publicKey',
+  attestationType: 'attestationType',
   aaguid: 'aaguid',
-  sign_count: 'sign_count',
+  signCount: 'signCount',
   transports: 'transports',
-  backup_eligible: 'backup_eligible',
-  backed_up: 'backed_up',
-  friendly_name: 'friendly_name',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-  last_used_at: 'last_used_at'
+  backupEligible: 'backupEligible',
+  backedUp: 'backedUp',
+  friendlyName: 'friendlyName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastUsedAt: 'lastUsedAt'
 } as const
 
-export type Webauthn_credentialsScalarFieldEnum = (typeof Webauthn_credentialsScalarFieldEnum)[keyof typeof Webauthn_credentialsScalarFieldEnum]
+export type WebauthnCredentialScalarFieldEnum = (typeof WebauthnCredentialScalarFieldEnum)[keyof typeof WebauthnCredentialScalarFieldEnum]
 
 
-export const Legacy_staffsScalarFieldEnum = {
+export const LegacyStaffScalarFieldEnum = {
   id: 'id',
-  first_name: 'first_name',
-  last_name: 'last_name',
-  is_active: 'is_active',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  isActive: 'isActive',
   photo: 'photo',
   role: 'role',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
-export type Legacy_staffsScalarFieldEnum = (typeof Legacy_staffsScalarFieldEnum)[keyof typeof Legacy_staffsScalarFieldEnum]
+export type LegacyStaffScalarFieldEnum = (typeof LegacyStaffScalarFieldEnum)[keyof typeof LegacyStaffScalarFieldEnum]
 
 
-export const Legacy_toursScalarFieldEnum = {
+export const LegacyTourScalarFieldEnum = {
   id: 'id',
   name: 'name',
   capacity: 'capacity',
@@ -496,39 +513,268 @@ export const Legacy_toursScalarFieldEnum = {
   description: 'description',
   photos: 'photos',
   price: 'price',
-  created_by: 'created_by',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
   availability: 'availability',
-  is_published: 'is_published',
+  isPublished: 'isPublished',
   slug: 'slug'
 } as const
 
-export type Legacy_toursScalarFieldEnum = (typeof Legacy_toursScalarFieldEnum)[keyof typeof Legacy_toursScalarFieldEnum]
+export type LegacyTourScalarFieldEnum = (typeof LegacyTourScalarFieldEnum)[keyof typeof LegacyTourScalarFieldEnum]
 
 
-export const Legacy_usersScalarFieldEnum = {
+export const LegacyUserScalarFieldEnum = {
   id: 'id',
-  first_name: 'first_name',
-  last_name: 'last_name',
+  firstName: 'firstName',
+  lastName: 'lastName',
   photo: 'photo',
   role: 'role',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
-export type Legacy_usersScalarFieldEnum = (typeof Legacy_usersScalarFieldEnum)[keyof typeof Legacy_usersScalarFieldEnum]
+export type LegacyUserScalarFieldEnum = (typeof LegacyUserScalarFieldEnum)[keyof typeof LegacyUserScalarFieldEnum]
 
 
-export const Spatial_ref_sysScalarFieldEnum = {
+export const SpatialRefSysScalarFieldEnum = {
   srid: 'srid',
-  auth_name: 'auth_name',
-  auth_srid: 'auth_srid',
+  authName: 'authName',
+  authSrid: 'authSrid',
   srtext: 'srtext',
   proj4text: 'proj4text'
 } as const
 
-export type Spatial_ref_sysScalarFieldEnum = (typeof Spatial_ref_sysScalarFieldEnum)[keyof typeof Spatial_ref_sysScalarFieldEnum]
+export type SpatialRefSysScalarFieldEnum = (typeof SpatialRefSysScalarFieldEnum)[keyof typeof SpatialRefSysScalarFieldEnum]
+
+
+export const ProfileScalarFieldEnum = {
+  id: 'id',
+  partnerId: 'partnerId',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  avatarUrl: 'avatarUrl',
+  role: 'role',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProfileScalarFieldEnum = (typeof ProfileScalarFieldEnum)[keyof typeof ProfileScalarFieldEnum]
+
+
+export const PaymentScalarFieldEnum = {
+  id: 'id',
+  bookingId: 'bookingId',
+  amount: 'amount',
+  currency: 'currency',
+  provider: 'provider',
+  stripeSessionId: 'stripeSessionId',
+  providerPaymentId: 'providerPaymentId',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+
+
+export const StripeWebhookEventScalarFieldEnum = {
+  eventId: 'eventId',
+  processedAt: 'processedAt'
+} as const
+
+export type StripeWebhookEventScalarFieldEnum = (typeof StripeWebhookEventScalarFieldEnum)[keyof typeof StripeWebhookEventScalarFieldEnum]
+
+
+export const LocationTimezoneScalarFieldEnum = {
+  id: 'id',
+  locationId: 'locationId',
+  timezoneId: 'timezoneId',
+  isPrimary: 'isPrimary',
+  createdAt: 'createdAt'
+} as const
+
+export type LocationTimezoneScalarFieldEnum = (typeof LocationTimezoneScalarFieldEnum)[keyof typeof LocationTimezoneScalarFieldEnum]
+
+
+export const LocationScalarFieldEnum = {
+  id: 'id',
+  parentId: 'parentId',
+  name: 'name',
+  level: 'level',
+  isoCodeAlpha2: 'isoCodeAlpha2',
+  createdAt: 'createdAt'
+} as const
+
+export type LocationScalarFieldEnum = (typeof LocationScalarFieldEnum)[keyof typeof LocationScalarFieldEnum]
+
+
+export const TimezoneScalarFieldEnum = {
+  id: 'id',
+  ianaName: 'ianaName',
+  canonicalName: 'canonicalName',
+  displayName: 'displayName',
+  region: 'region',
+  countryCodes: 'countryCodes',
+  abbreviationStd: 'abbreviationStd',
+  abbreviationDst: 'abbreviationDst',
+  isCanonical: 'isCanonical',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TimezoneScalarFieldEnum = (typeof TimezoneScalarFieldEnum)[keyof typeof TimezoneScalarFieldEnum]
+
+
+export const AvailabilityExceptionScalarFieldEnum = {
+  id: 'id',
+  tourId: 'tourId',
+  unavailableDate: 'unavailableDate',
+  reason: 'reason',
+  createdAt: 'createdAt',
+  partnerId: 'partnerId'
+} as const
+
+export type AvailabilityExceptionScalarFieldEnum = (typeof AvailabilityExceptionScalarFieldEnum)[keyof typeof AvailabilityExceptionScalarFieldEnum]
+
+
+export const AvailabilityRuleScalarFieldEnum = {
+  id: 'id',
+  tourId: 'tourId',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  daysOfWeek: 'daysOfWeek',
+  startTime: 'startTime',
+  createdAt: 'createdAt',
+  partnerId: 'partnerId'
+} as const
+
+export type AvailabilityRuleScalarFieldEnum = (typeof AvailabilityRuleScalarFieldEnum)[keyof typeof AvailabilityRuleScalarFieldEnum]
+
+
+export const BookingScalarFieldEnum = {
+  id: 'id',
+  tourScheduleId: 'tourScheduleId',
+  customerId: 'customerId',
+  seatsBooked: 'seatsBooked',
+  pricePaid: 'pricePaid',
+  currencyPaid: 'currencyPaid',
+  status: 'status',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  partnerId: 'partnerId'
+} as const
+
+export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeof BookingScalarFieldEnum]
+
+
+export const PartnerScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  contactEmail: 'contactEmail',
+  websiteUrl: 'websiteUrl',
+  isVerified: 'isVerified',
+  createdAt: 'createdAt'
+} as const
+
+export type PartnerScalarFieldEnum = (typeof PartnerScalarFieldEnum)[keyof typeof PartnerScalarFieldEnum]
+
+
+export const ReviewScalarFieldEnum = {
+  id: 'id',
+  reviewText: 'reviewText',
+  rating: 'rating',
+  tourId: 'tourId',
+  customerId: 'customerId',
+  createdAt: 'createdAt'
+} as const
+
+export type ReviewScalarFieldEnum = (typeof ReviewScalarFieldEnum)[keyof typeof ReviewScalarFieldEnum]
+
+
+export const TourGuideScalarFieldEnum = {
+  tourScheduleId: 'tourScheduleId',
+  guideId: 'guideId'
+} as const
+
+export type TourGuideScalarFieldEnum = (typeof TourGuideScalarFieldEnum)[keyof typeof TourGuideScalarFieldEnum]
+
+
+export const TourLocationScalarFieldEnum = {
+  tourId: 'tourId',
+  locationId: 'locationId',
+  dayOfTour: 'dayOfTour',
+  description: 'description'
+} as const
+
+export type TourLocationScalarFieldEnum = (typeof TourLocationScalarFieldEnum)[keyof typeof TourLocationScalarFieldEnum]
+
+
+export const TourMediaScalarFieldEnum = {
+  id: 'id',
+  tourId: 'tourId',
+  mediaType: 'mediaType',
+  url: 'url',
+  filename: 'filename',
+  altText: 'altText',
+  caption: 'caption',
+  displayOrder: 'displayOrder',
+  isCover: 'isCover',
+  fileSize: 'fileSize',
+  dimensions: 'dimensions',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TourMediaScalarFieldEnum = (typeof TourMediaScalarFieldEnum)[keyof typeof TourMediaScalarFieldEnum]
+
+
+export const TourScheduleScalarFieldEnum = {
+  id: 'id',
+  tourId: 'tourId',
+  startLocationId: 'startLocationId',
+  startDate: 'startDate',
+  seatsAvailable: 'seatsAvailable',
+  createdAt: 'createdAt'
+} as const
+
+export type TourScheduleScalarFieldEnum = (typeof TourScheduleScalarFieldEnum)[keyof typeof TourScheduleScalarFieldEnum]
+
+
+export const TourScalarFieldEnum = {
+  id: 'id',
+  partnerId: 'partnerId',
+  name: 'name',
+  slug: 'slug',
+  durationDays: 'durationDays',
+  maxGroupSize: 'maxGroupSize',
+  minBookingSize: 'minBookingSize',
+  difficulty: 'difficulty',
+  price: 'price',
+  currency: 'currency',
+  summary: 'summary',
+  description: 'description',
+  createdAt: 'createdAt',
+  status: 'status',
+  createdBy: 'createdBy',
+  updatedAt: 'updatedAt',
+  isDeleted: 'isDeleted',
+  deletedAt: 'deletedAt',
+  deletedBy: 'deletedBy'
+} as const
+
+export type TourScalarFieldEnum = (typeof TourScalarFieldEnum)[keyof typeof TourScalarFieldEnum]
+
+
+export const WishlistScalarFieldEnum = {
+  userId: 'userId',
+  tourId: 'tourId',
+  createdAt: 'createdAt'
+} as const
+
+export type WishlistScalarFieldEnum = (typeof WishlistScalarFieldEnum)[keyof typeof WishlistScalarFieldEnum]
 
 
 export const SortOrder = {
