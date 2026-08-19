@@ -950,6 +950,7 @@ enum AppRole {
   ADMIN         @map("admin")
   PARTNER_ADMIN @map("partner_admin")
 
+  @@map("app_role")
   @@schema("public")
 }
 
@@ -959,6 +960,7 @@ enum BookingStatus {
   CANCELLED @map("cancelled")
   EXPIRED   @map("expired")
 
+  @@map("booking_status")
   @@schema("public")
 }
 
@@ -970,6 +972,7 @@ enum LocationLevel {
   SUB_DISTRICT      @map("sub-district")
   POINT_OF_INTEREST @map("point-of-interest")
 
+  @@map("location_level")
   @@schema("public")
 }
 
@@ -978,6 +981,7 @@ enum PaymentStatus {
   SUCCEEDED @map("succeeded")
   FAILED    @map("failed")
 
+  @@map("payment_status")
   @@schema("public")
 }
 
@@ -986,6 +990,7 @@ enum TourDifficulty {
   MEDIUM    @map("medium")
   DIFFICULT @map("difficult")
 
+  @@map("tour_difficulty")
   @@schema("public")
 }
 
@@ -994,6 +999,7 @@ enum TourStatus {
   DRAFT       @map("draft")
   LIVE        @map("live")
 
+  @@map("tour_status")
   @@schema("public")
 }
 
@@ -1001,5 +1007,6 @@ enum MediaType {
   IMAGE @map("image")
   VIDEO @map("video")
 
+  @@map("media_type")
   @@schema("tour")
 }
