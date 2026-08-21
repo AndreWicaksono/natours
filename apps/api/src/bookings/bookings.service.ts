@@ -266,9 +266,17 @@ export class BookingsService {
       mode: 'payment',
       success_url: `${this.configService.get('SITE_URL')}/payment-success?booking_id=${booking.id}`,
       cancel_url: `${this.configService.get('SITE_URL')}/payment-cancelled`,
+      // ✅ Session-level metadata (for checkout.session.completed)
       metadata: {
         booking_id: booking.id.toString(),
         user_id: user.id,
+      },
+      // ✅ Propagate to Payment Intent (for payment_intent.* and charge.* events)
+      payment_intent_data: {
+        metadata: {
+          booking_id: booking.id.toString(),
+          user_id: user.id,
+        },
       },
     });
 
@@ -339,9 +347,18 @@ export class BookingsService {
         booking_id: booking.id.toString(),
         user_id: user.id,
       },
+      payment_intent_data: {
+        metadata: {
+          booking_id: booking.id.toString(),
+          user_id: user.id,
+        },
+      },
     });
 
-    await this.paymentsService.updatePaymentStripeSession(Number(booking.id), session.id);
+    await this.paymentsService.updatePaymentStripeSession(
+      Number(booking.id),
+      session.id,
+    );
 
     return { checkout_url: session.url };
   }
@@ -418,7 +435,16 @@ export class BookingsService {
         data: { seatsAvailable: { increment: booking.seatsBooked ?? 0 } },
       });
     });
-    this.logger.log(`❌ Booking ${bookingId} cancelled and seats released.`);
+
+    // ✅ Update payment status to FAILED
+    await this.paymentsService.updatePaymentStatus(
+      bookingId,
+      PaymentStatus.FAILED,
+    );
+
+    this.logger.log(
+      `❌ Booking ${bookingId} cancelled, seats released, and payment marked FAILED.`,
+    );
     return { message: 'Booking cancelled and seats released.' };
   }
 
@@ -450,7 +476,16 @@ export class BookingsService {
         data: { seatsAvailable: { increment: booking.seatsBooked ?? 0 } },
       });
     });
-    this.logger.log(`🔄 Booking ${bookingId} cancelled due to refund.`);
+
+    // ✅ Update payment status to FAILED
+    await this.paymentsService.updatePaymentStatus(
+      bookingId,
+      PaymentStatus.FAILED,
+    );
+
+    this.logger.log(
+      `🔄 Booking ${bookingId} cancelled due to refund, payment marked FAILED.`,
+    );
   }
 
   // --- Find all bookings ---

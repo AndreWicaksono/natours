@@ -86,16 +86,32 @@ export class StripeWebhookController {
         }
         case 'charge.refunded': {
           const charge = event.data.object as Stripe.Charge;
+          // ✅ Now available from payment_intent_data.metadata (propagated to charge)
           const bookingId = parseInt(charge.metadata?.booking_id ?? '');
           if (!isNaN(bookingId)) {
             await this.bookingsService.cancelBookingByAdmin(bookingId);
+            await this.paymentsService.updatePaymentStatus(
+              bookingId,
+              PaymentStatus.FAILED,
+            );
+            console.log(`💳 Payment refunded for booking ${bookingId}`);
           }
           break;
         }
         case 'payment_intent.payment_failed': {
-          // Optionally update payment status
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          // ✅ Now available from payment_intent_data.metadata
+          const bookingId = parseInt(paymentIntent.metadata?.booking_id ?? '');
+          if (!isNaN(bookingId)) {
+            await this.paymentsService.updatePaymentStatus(
+              bookingId,
+              PaymentStatus.FAILED,
+            );
+            console.log(`💳 Payment failed for booking ${bookingId}`);
+          }
           break;
         }
+
         default:
           console.log(`Unhandled event type: ${event.type}`);
       }
