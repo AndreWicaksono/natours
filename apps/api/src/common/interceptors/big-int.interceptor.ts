@@ -10,18 +10,27 @@ export class BigIntInterceptor implements NestInterceptor {
     );
   }
 
-  private convertBigInt(value: any): any {
+  private convertBigInt(value: any, seen = new WeakSet()): any {
     if (value === null || value === undefined) return value;
     if (typeof value === 'bigint') return value.toString();
-    if (Array.isArray(value)) return value.map((v) => this.convertBigInt(v));
     if (typeof value === 'object') {
-      const result: any = {};
-      for (const key in value) {
-        if (Object.prototype.hasOwnProperty.call(value, key)) {
-          result[key] = this.convertBigInt(value[key]);
-        }
+      // Prevent infinite recursion on circular references
+      if (seen.has(value)) {
+        return '[Circular]';
       }
-      return result;
+      seen.add(value);
+
+      if (Array.isArray(value)) {
+        return value.map((v) => this.convertBigInt(v, seen));
+      } else {
+        const result: any = {};
+        for (const key in value) {
+          if (Object.prototype.hasOwnProperty.call(value, key)) {
+            result[key] = this.convertBigInt(value[key], seen);
+          }
+        }
+        return result;
+      }
     }
     return value;
   }
