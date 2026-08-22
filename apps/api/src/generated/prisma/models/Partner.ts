@@ -42,6 +42,9 @@ export type PartnerMinAggregateOutputType = {
   websiteUrl: string | null
   isVerified: boolean | null
   createdAt: Date | null
+  stripeAccountId: string | null
+  stripeOnboardingStatus: string | null
+  stripeAccountCreatedAt: Date | null
 }
 
 export type PartnerMaxAggregateOutputType = {
@@ -52,6 +55,9 @@ export type PartnerMaxAggregateOutputType = {
   websiteUrl: string | null
   isVerified: boolean | null
   createdAt: Date | null
+  stripeAccountId: string | null
+  stripeOnboardingStatus: string | null
+  stripeAccountCreatedAt: Date | null
 }
 
 export type PartnerCountAggregateOutputType = {
@@ -62,6 +68,9 @@ export type PartnerCountAggregateOutputType = {
   websiteUrl: number
   isVerified: number
   createdAt: number
+  stripeAccountId: number
+  stripeOnboardingStatus: number
+  stripeAccountCreatedAt: number
   _all: number
 }
 
@@ -82,6 +91,9 @@ export type PartnerMinAggregateInputType = {
   websiteUrl?: true
   isVerified?: true
   createdAt?: true
+  stripeAccountId?: true
+  stripeOnboardingStatus?: true
+  stripeAccountCreatedAt?: true
 }
 
 export type PartnerMaxAggregateInputType = {
@@ -92,6 +104,9 @@ export type PartnerMaxAggregateInputType = {
   websiteUrl?: true
   isVerified?: true
   createdAt?: true
+  stripeAccountId?: true
+  stripeOnboardingStatus?: true
+  stripeAccountCreatedAt?: true
 }
 
 export type PartnerCountAggregateInputType = {
@@ -102,6 +117,9 @@ export type PartnerCountAggregateInputType = {
   websiteUrl?: true
   isVerified?: true
   createdAt?: true
+  stripeAccountId?: true
+  stripeOnboardingStatus?: true
+  stripeAccountCreatedAt?: true
   _all?: true
 }
 
@@ -199,6 +217,9 @@ export type PartnerGroupByOutputType = {
   websiteUrl: string | null
   isVerified: boolean | null
   createdAt: Date | null
+  stripeAccountId: string | null
+  stripeOnboardingStatus: string | null
+  stripeAccountCreatedAt: Date | null
   _count: PartnerCountAggregateOutputType | null
   _avg: PartnerAvgAggregateOutputType | null
   _sum: PartnerSumAggregateOutputType | null
@@ -232,11 +253,15 @@ export type PartnerWhereInput = {
   websiteUrl?: Prisma.StringNullableFilter<"Partner"> | string | null
   isVerified?: Prisma.BoolNullableFilter<"Partner"> | boolean | null
   createdAt?: Prisma.DateTimeNullableFilter<"Partner"> | Date | string | null
+  stripeAccountId?: Prisma.StringNullableFilter<"Partner"> | string | null
+  stripeOnboardingStatus?: Prisma.StringNullableFilter<"Partner"> | string | null
+  stripeAccountCreatedAt?: Prisma.DateTimeNullableFilter<"Partner"> | Date | string | null
   profiles?: Prisma.ProfileListRelationFilter
   availabilityExceptions?: Prisma.AvailabilityExceptionListRelationFilter
   availabilityRules?: Prisma.AvailabilityRuleListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
   tours?: Prisma.TourListRelationFilter
+  platformTransfers?: Prisma.PlatformTransferListRelationFilter
 }
 
 export type PartnerOrderByWithRelationInput = {
@@ -247,17 +272,22 @@ export type PartnerOrderByWithRelationInput = {
   websiteUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   isVerified?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  stripeAccountId?: Prisma.SortOrderInput | Prisma.SortOrder
+  stripeOnboardingStatus?: Prisma.SortOrderInput | Prisma.SortOrder
+  stripeAccountCreatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   profiles?: Prisma.ProfileOrderByRelationAggregateInput
   availabilityExceptions?: Prisma.AvailabilityExceptionOrderByRelationAggregateInput
   availabilityRules?: Prisma.AvailabilityRuleOrderByRelationAggregateInput
   bookings?: Prisma.BookingOrderByRelationAggregateInput
   tours?: Prisma.TourOrderByRelationAggregateInput
+  platformTransfers?: Prisma.PlatformTransferOrderByRelationAggregateInput
 }
 
 export type PartnerWhereUniqueInput = Prisma.AtLeast<{
   id?: bigint | number
   name?: string
   contactEmail?: string
+  stripeAccountId?: string
   AND?: Prisma.PartnerWhereInput | Prisma.PartnerWhereInput[]
   OR?: Prisma.PartnerWhereInput[]
   NOT?: Prisma.PartnerWhereInput | Prisma.PartnerWhereInput[]
@@ -265,12 +295,15 @@ export type PartnerWhereUniqueInput = Prisma.AtLeast<{
   websiteUrl?: Prisma.StringNullableFilter<"Partner"> | string | null
   isVerified?: Prisma.BoolNullableFilter<"Partner"> | boolean | null
   createdAt?: Prisma.DateTimeNullableFilter<"Partner"> | Date | string | null
+  stripeOnboardingStatus?: Prisma.StringNullableFilter<"Partner"> | string | null
+  stripeAccountCreatedAt?: Prisma.DateTimeNullableFilter<"Partner"> | Date | string | null
   profiles?: Prisma.ProfileListRelationFilter
   availabilityExceptions?: Prisma.AvailabilityExceptionListRelationFilter
   availabilityRules?: Prisma.AvailabilityRuleListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
   tours?: Prisma.TourListRelationFilter
-}, "id" | "name" | "contactEmail">
+  platformTransfers?: Prisma.PlatformTransferListRelationFilter
+}, "id" | "name" | "contactEmail" | "stripeAccountId">
 
 export type PartnerOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -280,6 +313,9 @@ export type PartnerOrderByWithAggregationInput = {
   websiteUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   isVerified?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  stripeAccountId?: Prisma.SortOrderInput | Prisma.SortOrder
+  stripeOnboardingStatus?: Prisma.SortOrderInput | Prisma.SortOrder
+  stripeAccountCreatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.PartnerCountOrderByAggregateInput
   _avg?: Prisma.PartnerAvgOrderByAggregateInput
   _max?: Prisma.PartnerMaxOrderByAggregateInput
@@ -298,6 +334,9 @@ export type PartnerScalarWhereWithAggregatesInput = {
   websiteUrl?: Prisma.StringNullableWithAggregatesFilter<"Partner"> | string | null
   isVerified?: Prisma.BoolNullableWithAggregatesFilter<"Partner"> | boolean | null
   createdAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Partner"> | Date | string | null
+  stripeAccountId?: Prisma.StringNullableWithAggregatesFilter<"Partner"> | string | null
+  stripeOnboardingStatus?: Prisma.StringNullableWithAggregatesFilter<"Partner"> | string | null
+  stripeAccountCreatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Partner"> | Date | string | null
 }
 
 export type PartnerCreateInput = {
@@ -308,11 +347,15 @@ export type PartnerCreateInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerUncheckedCreateInput = {
@@ -323,11 +366,15 @@ export type PartnerUncheckedCreateInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileUncheckedCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourUncheckedCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerUpdateInput = {
@@ -338,11 +385,15 @@ export type PartnerUpdateInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerUncheckedUpdateInput = {
@@ -353,11 +404,15 @@ export type PartnerUncheckedUpdateInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUncheckedUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerCreateManyInput = {
@@ -368,6 +423,9 @@ export type PartnerCreateManyInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
 }
 
 export type PartnerUpdateManyMutationInput = {
@@ -378,6 +436,9 @@ export type PartnerUpdateManyMutationInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PartnerUncheckedUpdateManyInput = {
@@ -388,6 +449,9 @@ export type PartnerUncheckedUpdateManyInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PartnerNullableScalarRelationFilter = {
@@ -403,6 +467,9 @@ export type PartnerCountOrderByAggregateInput = {
   websiteUrl?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  stripeAccountId?: Prisma.SortOrder
+  stripeOnboardingStatus?: Prisma.SortOrder
+  stripeAccountCreatedAt?: Prisma.SortOrder
 }
 
 export type PartnerAvgOrderByAggregateInput = {
@@ -417,6 +484,9 @@ export type PartnerMaxOrderByAggregateInput = {
   websiteUrl?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  stripeAccountId?: Prisma.SortOrder
+  stripeOnboardingStatus?: Prisma.SortOrder
+  stripeAccountCreatedAt?: Prisma.SortOrder
 }
 
 export type PartnerMinOrderByAggregateInput = {
@@ -427,10 +497,18 @@ export type PartnerMinOrderByAggregateInput = {
   websiteUrl?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  stripeAccountId?: Prisma.SortOrder
+  stripeOnboardingStatus?: Prisma.SortOrder
+  stripeAccountCreatedAt?: Prisma.SortOrder
 }
 
 export type PartnerSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+}
+
+export type PartnerScalarRelationFilter = {
+  is?: Prisma.PartnerWhereInput
+  isNot?: Prisma.PartnerWhereInput
 }
 
 export type PartnerCreateNestedOneWithoutProfilesInput = {
@@ -497,6 +575,20 @@ export type PartnerUpdateOneWithoutBookingsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.PartnerUpdateToOneWithWhereWithoutBookingsInput, Prisma.PartnerUpdateWithoutBookingsInput>, Prisma.PartnerUncheckedUpdateWithoutBookingsInput>
 }
 
+export type PartnerCreateNestedOneWithoutPlatformTransfersInput = {
+  create?: Prisma.XOR<Prisma.PartnerCreateWithoutPlatformTransfersInput, Prisma.PartnerUncheckedCreateWithoutPlatformTransfersInput>
+  connectOrCreate?: Prisma.PartnerCreateOrConnectWithoutPlatformTransfersInput
+  connect?: Prisma.PartnerWhereUniqueInput
+}
+
+export type PartnerUpdateOneRequiredWithoutPlatformTransfersNestedInput = {
+  create?: Prisma.XOR<Prisma.PartnerCreateWithoutPlatformTransfersInput, Prisma.PartnerUncheckedCreateWithoutPlatformTransfersInput>
+  connectOrCreate?: Prisma.PartnerCreateOrConnectWithoutPlatformTransfersInput
+  upsert?: Prisma.PartnerUpsertWithoutPlatformTransfersInput
+  connect?: Prisma.PartnerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PartnerUpdateToOneWithWhereWithoutPlatformTransfersInput, Prisma.PartnerUpdateWithoutPlatformTransfersInput>, Prisma.PartnerUncheckedUpdateWithoutPlatformTransfersInput>
+}
+
 export type PartnerCreateNestedOneWithoutToursInput = {
   create?: Prisma.XOR<Prisma.PartnerCreateWithoutToursInput, Prisma.PartnerUncheckedCreateWithoutToursInput>
   connectOrCreate?: Prisma.PartnerCreateOrConnectWithoutToursInput
@@ -521,10 +613,14 @@ export type PartnerCreateWithoutProfilesInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   availabilityExceptions?: Prisma.AvailabilityExceptionCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerUncheckedCreateWithoutProfilesInput = {
@@ -535,10 +631,14 @@ export type PartnerUncheckedCreateWithoutProfilesInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourUncheckedCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerCreateOrConnectWithoutProfilesInput = {
@@ -565,10 +665,14 @@ export type PartnerUpdateWithoutProfilesInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   availabilityExceptions?: Prisma.AvailabilityExceptionUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerUncheckedUpdateWithoutProfilesInput = {
@@ -579,10 +683,14 @@ export type PartnerUncheckedUpdateWithoutProfilesInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUncheckedUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerCreateWithoutAvailabilityExceptionsInput = {
@@ -593,10 +701,14 @@ export type PartnerCreateWithoutAvailabilityExceptionsInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerUncheckedCreateWithoutAvailabilityExceptionsInput = {
@@ -607,10 +719,14 @@ export type PartnerUncheckedCreateWithoutAvailabilityExceptionsInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileUncheckedCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourUncheckedCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerCreateOrConnectWithoutAvailabilityExceptionsInput = {
@@ -637,10 +753,14 @@ export type PartnerUpdateWithoutAvailabilityExceptionsInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerUncheckedUpdateWithoutAvailabilityExceptionsInput = {
@@ -651,10 +771,14 @@ export type PartnerUncheckedUpdateWithoutAvailabilityExceptionsInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUncheckedUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerCreateWithoutAvailabilityRulesInput = {
@@ -665,10 +789,14 @@ export type PartnerCreateWithoutAvailabilityRulesInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerUncheckedCreateWithoutAvailabilityRulesInput = {
@@ -679,10 +807,14 @@ export type PartnerUncheckedCreateWithoutAvailabilityRulesInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileUncheckedCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourUncheckedCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerCreateOrConnectWithoutAvailabilityRulesInput = {
@@ -709,10 +841,14 @@ export type PartnerUpdateWithoutAvailabilityRulesInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerUncheckedUpdateWithoutAvailabilityRulesInput = {
@@ -723,10 +859,14 @@ export type PartnerUncheckedUpdateWithoutAvailabilityRulesInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUncheckedUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerCreateWithoutBookingsInput = {
@@ -737,10 +877,14 @@ export type PartnerCreateWithoutBookingsInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerUncheckedCreateWithoutBookingsInput = {
@@ -751,10 +895,14 @@ export type PartnerUncheckedCreateWithoutBookingsInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileUncheckedCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedCreateNestedManyWithoutPartnerInput
   tours?: Prisma.TourUncheckedCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerCreateOrConnectWithoutBookingsInput = {
@@ -781,10 +929,14 @@ export type PartnerUpdateWithoutBookingsInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerUncheckedUpdateWithoutBookingsInput = {
@@ -795,9 +947,101 @@ export type PartnerUncheckedUpdateWithoutBookingsInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedUpdateManyWithoutPartnerNestedInput
+  tours?: Prisma.TourUncheckedUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutPartnerNestedInput
+}
+
+export type PartnerCreateWithoutPlatformTransfersInput = {
+  id?: bigint | number
+  name?: string | null
+  description?: string | null
+  contactEmail?: string | null
+  websiteUrl?: string | null
+  isVerified?: boolean | null
+  createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
+  profiles?: Prisma.ProfileCreateNestedManyWithoutPartnerInput
+  availabilityExceptions?: Prisma.AvailabilityExceptionCreateNestedManyWithoutPartnerInput
+  availabilityRules?: Prisma.AvailabilityRuleCreateNestedManyWithoutPartnerInput
+  bookings?: Prisma.BookingCreateNestedManyWithoutPartnerInput
+  tours?: Prisma.TourCreateNestedManyWithoutPartnerInput
+}
+
+export type PartnerUncheckedCreateWithoutPlatformTransfersInput = {
+  id?: bigint | number
+  name?: string | null
+  description?: string | null
+  contactEmail?: string | null
+  websiteUrl?: string | null
+  isVerified?: boolean | null
+  createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
+  profiles?: Prisma.ProfileUncheckedCreateNestedManyWithoutPartnerInput
+  availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedCreateNestedManyWithoutPartnerInput
+  availabilityRules?: Prisma.AvailabilityRuleUncheckedCreateNestedManyWithoutPartnerInput
+  bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutPartnerInput
+  tours?: Prisma.TourUncheckedCreateNestedManyWithoutPartnerInput
+}
+
+export type PartnerCreateOrConnectWithoutPlatformTransfersInput = {
+  where: Prisma.PartnerWhereUniqueInput
+  create: Prisma.XOR<Prisma.PartnerCreateWithoutPlatformTransfersInput, Prisma.PartnerUncheckedCreateWithoutPlatformTransfersInput>
+}
+
+export type PartnerUpsertWithoutPlatformTransfersInput = {
+  update: Prisma.XOR<Prisma.PartnerUpdateWithoutPlatformTransfersInput, Prisma.PartnerUncheckedUpdateWithoutPlatformTransfersInput>
+  create: Prisma.XOR<Prisma.PartnerCreateWithoutPlatformTransfersInput, Prisma.PartnerUncheckedCreateWithoutPlatformTransfersInput>
+  where?: Prisma.PartnerWhereInput
+}
+
+export type PartnerUpdateToOneWithWhereWithoutPlatformTransfersInput = {
+  where?: Prisma.PartnerWhereInput
+  data: Prisma.XOR<Prisma.PartnerUpdateWithoutPlatformTransfersInput, Prisma.PartnerUncheckedUpdateWithoutPlatformTransfersInput>
+}
+
+export type PartnerUpdateWithoutPlatformTransfersInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  profiles?: Prisma.ProfileUpdateManyWithoutPartnerNestedInput
+  availabilityExceptions?: Prisma.AvailabilityExceptionUpdateManyWithoutPartnerNestedInput
+  availabilityRules?: Prisma.AvailabilityRuleUpdateManyWithoutPartnerNestedInput
+  bookings?: Prisma.BookingUpdateManyWithoutPartnerNestedInput
+  tours?: Prisma.TourUpdateManyWithoutPartnerNestedInput
+}
+
+export type PartnerUncheckedUpdateWithoutPlatformTransfersInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  profiles?: Prisma.ProfileUncheckedUpdateManyWithoutPartnerNestedInput
+  availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedUpdateManyWithoutPartnerNestedInput
+  availabilityRules?: Prisma.AvailabilityRuleUncheckedUpdateManyWithoutPartnerNestedInput
+  bookings?: Prisma.BookingUncheckedUpdateManyWithoutPartnerNestedInput
   tours?: Prisma.TourUncheckedUpdateManyWithoutPartnerNestedInput
 }
 
@@ -809,10 +1053,14 @@ export type PartnerCreateWithoutToursInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerUncheckedCreateWithoutToursInput = {
@@ -823,10 +1071,14 @@ export type PartnerUncheckedCreateWithoutToursInput = {
   websiteUrl?: string | null
   isVerified?: boolean | null
   createdAt?: Date | string | null
+  stripeAccountId?: string | null
+  stripeOnboardingStatus?: string | null
+  stripeAccountCreatedAt?: Date | string | null
   profiles?: Prisma.ProfileUncheckedCreateNestedManyWithoutPartnerInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedCreateNestedManyWithoutPartnerInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedCreateNestedManyWithoutPartnerInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutPartnerInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutPartnerInput
 }
 
 export type PartnerCreateOrConnectWithoutToursInput = {
@@ -853,10 +1105,14 @@ export type PartnerUpdateWithoutToursInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutPartnerNestedInput
 }
 
 export type PartnerUncheckedUpdateWithoutToursInput = {
@@ -867,10 +1123,14 @@ export type PartnerUncheckedUpdateWithoutToursInput = {
   websiteUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeOnboardingStatus?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeAccountCreatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   profiles?: Prisma.ProfileUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityExceptions?: Prisma.AvailabilityExceptionUncheckedUpdateManyWithoutPartnerNestedInput
   availabilityRules?: Prisma.AvailabilityRuleUncheckedUpdateManyWithoutPartnerNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutPartnerNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutPartnerNestedInput
 }
 
 
@@ -884,6 +1144,7 @@ export type PartnerCountOutputType = {
   availabilityRules: number
   bookings: number
   tours: number
+  platformTransfers: number
 }
 
 export type PartnerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -892,6 +1153,7 @@ export type PartnerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   availabilityRules?: boolean | PartnerCountOutputTypeCountAvailabilityRulesArgs
   bookings?: boolean | PartnerCountOutputTypeCountBookingsArgs
   tours?: boolean | PartnerCountOutputTypeCountToursArgs
+  platformTransfers?: boolean | PartnerCountOutputTypeCountPlatformTransfersArgs
 }
 
 /**
@@ -939,6 +1201,13 @@ export type PartnerCountOutputTypeCountToursArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.TourWhereInput
 }
 
+/**
+ * PartnerCountOutputType without action
+ */
+export type PartnerCountOutputTypeCountPlatformTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlatformTransferWhereInput
+}
+
 
 export type PartnerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -948,11 +1217,15 @@ export type PartnerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   websiteUrl?: boolean
   isVerified?: boolean
   createdAt?: boolean
+  stripeAccountId?: boolean
+  stripeOnboardingStatus?: boolean
+  stripeAccountCreatedAt?: boolean
   profiles?: boolean | Prisma.Partner$profilesArgs<ExtArgs>
   availabilityExceptions?: boolean | Prisma.Partner$availabilityExceptionsArgs<ExtArgs>
   availabilityRules?: boolean | Prisma.Partner$availabilityRulesArgs<ExtArgs>
   bookings?: boolean | Prisma.Partner$bookingsArgs<ExtArgs>
   tours?: boolean | Prisma.Partner$toursArgs<ExtArgs>
+  platformTransfers?: boolean | Prisma.Partner$platformTransfersArgs<ExtArgs>
   _count?: boolean | Prisma.PartnerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["partner"]>
 
@@ -964,6 +1237,9 @@ export type PartnerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   websiteUrl?: boolean
   isVerified?: boolean
   createdAt?: boolean
+  stripeAccountId?: boolean
+  stripeOnboardingStatus?: boolean
+  stripeAccountCreatedAt?: boolean
 }, ExtArgs["result"]["partner"]>
 
 export type PartnerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -974,6 +1250,9 @@ export type PartnerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   websiteUrl?: boolean
   isVerified?: boolean
   createdAt?: boolean
+  stripeAccountId?: boolean
+  stripeOnboardingStatus?: boolean
+  stripeAccountCreatedAt?: boolean
 }, ExtArgs["result"]["partner"]>
 
 export type PartnerSelectScalar = {
@@ -984,15 +1263,19 @@ export type PartnerSelectScalar = {
   websiteUrl?: boolean
   isVerified?: boolean
   createdAt?: boolean
+  stripeAccountId?: boolean
+  stripeOnboardingStatus?: boolean
+  stripeAccountCreatedAt?: boolean
 }
 
-export type PartnerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "description" | "contactEmail" | "websiteUrl" | "isVerified" | "createdAt", ExtArgs["result"]["partner"]>
+export type PartnerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "description" | "contactEmail" | "websiteUrl" | "isVerified" | "createdAt" | "stripeAccountId" | "stripeOnboardingStatus" | "stripeAccountCreatedAt", ExtArgs["result"]["partner"]>
 export type PartnerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   profiles?: boolean | Prisma.Partner$profilesArgs<ExtArgs>
   availabilityExceptions?: boolean | Prisma.Partner$availabilityExceptionsArgs<ExtArgs>
   availabilityRules?: boolean | Prisma.Partner$availabilityRulesArgs<ExtArgs>
   bookings?: boolean | Prisma.Partner$bookingsArgs<ExtArgs>
   tours?: boolean | Prisma.Partner$toursArgs<ExtArgs>
+  platformTransfers?: boolean | Prisma.Partner$platformTransfersArgs<ExtArgs>
   _count?: boolean | Prisma.PartnerCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type PartnerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1006,6 +1289,7 @@ export type $PartnerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     availabilityRules: Prisma.$AvailabilityRulePayload<ExtArgs>[]
     bookings: Prisma.$BookingPayload<ExtArgs>[]
     tours: Prisma.$TourPayload<ExtArgs>[]
+    platformTransfers: Prisma.$PlatformTransferPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: bigint
@@ -1015,6 +1299,9 @@ export type $PartnerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     websiteUrl: string | null
     isVerified: boolean | null
     createdAt: Date | null
+    stripeAccountId: string | null
+    stripeOnboardingStatus: string | null
+    stripeAccountCreatedAt: Date | null
   }, ExtArgs["result"]["partner"]>
   composites: {}
 }
@@ -1414,6 +1701,7 @@ export interface Prisma__PartnerClient<T, Null = never, ExtArgs extends runtime.
   availabilityRules<T extends Prisma.Partner$availabilityRulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Partner$availabilityRulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AvailabilityRulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bookings<T extends Prisma.Partner$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Partner$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tours<T extends Prisma.Partner$toursArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Partner$toursArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TourPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  platformTransfers<T extends Prisma.Partner$platformTransfersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Partner$platformTransfersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1450,6 +1738,9 @@ export interface PartnerFieldRefs {
   readonly websiteUrl: Prisma.FieldRef<"Partner", 'String'>
   readonly isVerified: Prisma.FieldRef<"Partner", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"Partner", 'DateTime'>
+  readonly stripeAccountId: Prisma.FieldRef<"Partner", 'String'>
+  readonly stripeOnboardingStatus: Prisma.FieldRef<"Partner", 'String'>
+  readonly stripeAccountCreatedAt: Prisma.FieldRef<"Partner", 'DateTime'>
 }
     
 
@@ -1960,6 +2251,30 @@ export type Partner$toursArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.TourScalarFieldEnum | Prisma.TourScalarFieldEnum[]
+}
+
+/**
+ * Partner.platformTransfers
+ */
+export type Partner$platformTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformTransfer
+   */
+  select?: Prisma.PlatformTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformTransfer
+   */
+  omit?: Prisma.PlatformTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformTransferInclude<ExtArgs> | null
+  where?: Prisma.PlatformTransferWhereInput
+  orderBy?: Prisma.PlatformTransferOrderByWithRelationInput | Prisma.PlatformTransferOrderByWithRelationInput[]
+  cursor?: Prisma.PlatformTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlatformTransferScalarFieldEnum | Prisma.PlatformTransferScalarFieldEnum[]
 }
 
 /**

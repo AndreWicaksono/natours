@@ -699,20 +699,21 @@ model AvailabilityRule {
 }
 
 model Booking {
-  id             BigInt         @id @default(autoincrement())
-  tourScheduleId BigInt?        @map("tour_schedule_id")
-  customerId     String?        @map("customer_id") @db.Uuid
-  seatsBooked    Int?           @map("seats_booked")
-  pricePaid      Decimal?       @map("price_paid") @db.Decimal
-  currencyPaid   String?        @map("currency_paid") @db.Char(3)
-  status         BookingStatus?
-  expiresAt      DateTime?      @map("expires_at") @db.Timestamptz(6)
-  createdAt      DateTime?      @default(now()) @map("created_at") @db.Timestamptz(6)
-  partnerId      BigInt?        @map("partner_id")
-  payments       Payment[]
-  user           User?          @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  partner        Partner?       @relation(fields: [partnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tourSchedule   TourSchedule?  @relation(fields: [tourScheduleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                BigInt             @id @default(autoincrement())
+  tourScheduleId    BigInt?            @map("tour_schedule_id")
+  customerId        String?            @map("customer_id") @db.Uuid
+  seatsBooked       Int?               @map("seats_booked")
+  pricePaid         Decimal?           @map("price_paid") @db.Decimal
+  currencyPaid      String?            @map("currency_paid") @db.Char(3)
+  status            BookingStatus?
+  expiresAt         DateTime?          @map("expires_at") @db.Timestamptz(6)
+  createdAt         DateTime?          @default(now()) @map("created_at") @db.Timestamptz(6)
+  partnerId         BigInt?            @map("partner_id")
+  payments          Payment[]
+  user              User?              @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  partner           Partner?           @relation(fields: [partnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tourSchedule      TourSchedule?      @relation(fields: [tourScheduleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  platformTransfers PlatformTransfer[]
 
   @@index([customerId])
   @@index([partnerId])
@@ -734,9 +735,36 @@ model Partner {
   availabilityRules      AvailabilityRule[]
   bookings               Booking[]
   tours                  Tour[]
+  stripeAccountId        String?                 @unique @map("stripe_account_id")
+  stripeOnboardingStatus String?                 @default("pending") @map("stripe_onboarding_status")
+  stripeAccountCreatedAt DateTime?               @map("stripe_account_created_at")
+  platformTransfers      PlatformTransfer[]
 
   @@map("partners")
   @@schema("tour")
+}
+
+model PlatformTransfer {
+  id               String         @id @default(cuid())
+  bookingId        BigInt         @map("booking_id")
+  partnerId        BigInt         @map("partner_id")
+  grossAmount      Decimal        @map("gross_amount") @db.Decimal(10, 2)
+  platformFee      Decimal        @map("platform_fee") @db.Decimal(10, 2)
+  netAmount        Decimal        @map("net_amount") @db.Decimal(10, 2)
+  stripeTransferId String?        @map("stripe_transfer_id")
+  status           TransferStatus @default(PENDING)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  succeededAt      DateTime?      @map("succeeded_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@index([bookingId])
+  @@index([partnerId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("platform_transfers")
+  @@schema("billing")
 }
 
 model Review {
@@ -1001,6 +1029,14 @@ enum TourStatus {
 
   @@map("tour_status")
   @@schema("public")
+}
+
+enum TransferStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+
+  @@schema("billing")
 }
 
 enum MediaType {

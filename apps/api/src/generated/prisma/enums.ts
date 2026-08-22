@@ -148,6 +148,15 @@ export const TourStatus = {
 export type TourStatus = (typeof TourStatus)[keyof typeof TourStatus]
 
 
+export const TransferStatus = {
+  PENDING: 'PENDING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED'
+} as const
+
+export type TransferStatus = (typeof TransferStatus)[keyof typeof TransferStatus]
+
+
 export const MediaType = {
   IMAGE: 'IMAGE',
   VIDEO: 'VIDEO'

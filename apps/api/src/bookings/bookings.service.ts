@@ -245,9 +245,29 @@ export class BookingsService {
       return b;
     });
 
-    // 7. Create Stripe Checkout Session
+    // 7. Create Stripe Checkout Session with Connect split
     const price = Number(tour.price ?? 0);
     const unitAmount = Math.round(price * 100);
+    const totalAmount = unitAmount * dto.seatsBooked;
+
+    // 💰 Calculate platform fee (commission percentage set in config)
+    const PLATFORM_FEE_PERCENTAGE =
+      this.configService.get<number>('PLATFORM_FEE_PERCENTAGE') || 10;
+    const platformFee = Math.round(
+      (totalAmount * PLATFORM_FEE_PERCENTAGE) / 100,
+    );
+
+    // Fetch the partner's Stripe Connect account ID
+    const partner = await this.prisma.partner.findUnique({
+      where: { id: tour.partnerId },
+      select: { stripeAccountId: true },
+    });
+
+    if (!partner?.stripeAccountId) {
+      throw new BadRequestException(
+        'The partner has not completed Stripe Connect onboarding. Please contact support.',
+      );
+    }
 
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -266,16 +286,21 @@ export class BookingsService {
       mode: 'payment',
       success_url: `${this.configService.get('SITE_URL')}/payment-success?booking_id=${booking.id}`,
       cancel_url: `${this.configService.get('SITE_URL')}/payment-cancelled`,
-      // ✅ Session-level metadata (for checkout.session.completed)
       metadata: {
         booking_id: booking.id.toString(),
         user_id: user.id,
+        partner_id: tour.partnerId.toString(),
       },
-      // ✅ Propagate to Payment Intent (for payment_intent.* and charge.* events)
       payment_intent_data: {
+        application_fee_amount: platformFee,
+        transfer_data: {
+          destination: partner.stripeAccountId, // ✅ guaranteed string
+        },
+        transfer_group: `booking_${booking.id}`,
         metadata: {
           booking_id: booking.id.toString(),
           user_id: user.id,
+          partner_id: tour.partnerId.toString(),
         },
       },
     });
@@ -302,7 +327,11 @@ export class BookingsService {
       where: { id: bookingId },
       include: {
         tourSchedule: {
-          include: { tour: true },
+          include: {
+            tour: {
+              include: { partner: true },
+            },
+          },
         },
       },
     });
@@ -322,6 +351,23 @@ export class BookingsService {
     const tour = booking.tourSchedule?.tour;
     if (!tour)
       throw new BadRequestException('Tour not found for this booking.');
+
+    // ✅ Check that the tour has a partner
+    if (!tour.partnerId) {
+      throw new BadRequestException('Tour has no associated partner.');
+    }
+
+    // ✅ Fetch the partner's Stripe Connect account ID
+    const partner = await this.prisma.partner.findUnique({
+      where: { id: tour.partnerId },
+      select: { stripeAccountId: true },
+    });
+
+    if (!partner?.stripeAccountId) {
+      throw new BadRequestException(
+        'The partner has not completed Stripe Connect onboarding. Please contact support.',
+      );
+    }
 
     const price = Number(booking.pricePaid ?? 0);
     const unitAmount = Math.round(price * 100);
@@ -348,6 +394,10 @@ export class BookingsService {
         user_id: user.id,
       },
       payment_intent_data: {
+        transfer_data: {
+          destination: partner.stripeAccountId,
+        },
+        transfer_group: `booking_${booking.id}`,
         metadata: {
           booking_id: booking.id.toString(),
           user_id: user.id,

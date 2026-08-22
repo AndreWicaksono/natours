@@ -5,7 +5,8 @@ import Stripe from 'stripe';
 import { BookingsService } from '../../bookings/bookings.service';
 import { PaymentsService } from '../payments.service';
 import { Public } from '../../auth/public.decorator';
-import { PaymentStatus } from 'src/generated/prisma/enums';
+import { PaymentStatus, TransferStatus } from 'src/generated/prisma/enums';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Controller('webhooks/stripe')
 export class StripeWebhookController {
@@ -15,6 +16,7 @@ export class StripeWebhookController {
     private configService: ConfigService,
     private bookingsService: BookingsService,
     private paymentsService: PaymentsService,
+    private prisma: PrismaService,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
@@ -64,14 +66,52 @@ export class StripeWebhookController {
         case 'checkout.session.completed': {
           const session = event.data.object as Stripe.Checkout.Session;
           const bookingId = parseInt(session.metadata?.booking_id ?? '');
-          if (!isNaN(bookingId)) {
+          const partnerId = parseInt(session.metadata?.partner_id ?? '');
+
+          if (!isNaN(bookingId) && !isNaN(partnerId)) {
+            // Confirm booking and update payment status
             await this.bookingsService.confirmBooking(bookingId);
             await this.paymentsService.updatePaymentStatus(
               bookingId,
               PaymentStatus.SUCCEEDED,
             );
+
+            // Retrieve Payment Intent to get application fee and transfer details
+            let paymentIntent: Stripe.PaymentIntent | null = null;
+            if (session.payment_intent) {
+              const piId =
+                typeof session.payment_intent === 'string'
+                  ? session.payment_intent
+                  : session.payment_intent.id;
+              paymentIntent = await this.stripe.paymentIntents.retrieve(piId);
+            }
+
+            // Calculate amounts safely
+            const grossAmount = (session.amount_total ?? 0) / 100;
+            const platformFee = paymentIntent?.application_fee_amount
+              ? paymentIntent.application_fee_amount / 100
+              : 0;
+            const netAmount = grossAmount - platformFee;
+
+            // ✅ Get transfer ID (using any cast because TypeScript doesn't know about this property)
+            const transferId = (paymentIntent as any)?.transfer || null;
+
+            // Record the transfer
+            await this.prisma.platformTransfer.create({
+              data: {
+                bookingId: bookingId,
+                partnerId: partnerId,
+                grossAmount: grossAmount,
+                platformFee: platformFee,
+                netAmount: netAmount,
+                stripeTransferId: transferId || 'pending',
+                status: TransferStatus.SUCCEEDED,
+                succeededAt: new Date(),
+              },
+            });
+
             console.log(
-              `✅ Booking ${bookingId} confirmed and payment succeeded.`,
+              `✅ Booking ${bookingId} confirmed, payment succeeded, and transfer recorded.`,
             );
           }
           break;
@@ -108,6 +148,50 @@ export class StripeWebhookController {
               PaymentStatus.FAILED,
             );
             console.log(`💳 Payment failed for booking ${bookingId}`);
+          }
+          break;
+        }
+        case 'account.updated': {
+          const account = event.data.object as Stripe.Account;
+          const partnerId = account.metadata?.partnerId;
+
+          if (partnerId) {
+            const detailsSubmitted = account.details_submitted;
+            const chargesEnabled = account.charges_enabled;
+            const payoutsEnabled = account.payouts_enabled;
+
+            let status = 'pending';
+            if (detailsSubmitted && chargesEnabled && payoutsEnabled) {
+              status = 'active';
+            } else if (detailsSubmitted) {
+              status = 'restricted';
+            }
+
+            await this.prisma.partner.update({
+              where: { stripeAccountId: account.id },
+              data: { stripeOnboardingStatus: status },
+            });
+
+            console.log(
+              `✅ Partner ${partnerId} onboarding status updated to ${status}`,
+            );
+          }
+          break;
+        }
+        case 'transfer.created': {
+          const transfer = event.data.object as Stripe.Transfer;
+          const bookingId = parseInt(
+            transfer.transfer_group?.replace('booking_', '') ?? '',
+          );
+
+          if (!isNaN(bookingId)) {
+            await this.prisma.platformTransfer.updateMany({
+              where: { bookingId, stripeTransferId: 'pending' },
+              data: { stripeTransferId: transfer.id },
+            });
+            console.log(
+              `✅ Transfer ID updated for booking ${bookingId}: ${transfer.id}`,
+            );
           }
           break;
         }

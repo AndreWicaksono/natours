@@ -276,6 +276,7 @@ export type BookingWhereInput = {
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   partner?: Prisma.XOR<Prisma.PartnerNullableScalarRelationFilter, Prisma.PartnerWhereInput> | null
   tourSchedule?: Prisma.XOR<Prisma.TourScheduleNullableScalarRelationFilter, Prisma.TourScheduleWhereInput> | null
+  platformTransfers?: Prisma.PlatformTransferListRelationFilter
 }
 
 export type BookingOrderByWithRelationInput = {
@@ -293,6 +294,7 @@ export type BookingOrderByWithRelationInput = {
   user?: Prisma.UserOrderByWithRelationInput
   partner?: Prisma.PartnerOrderByWithRelationInput
   tourSchedule?: Prisma.TourScheduleOrderByWithRelationInput
+  platformTransfers?: Prisma.PlatformTransferOrderByRelationAggregateInput
 }
 
 export type BookingWhereUniqueInput = Prisma.AtLeast<{
@@ -313,6 +315,7 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<{
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   partner?: Prisma.XOR<Prisma.PartnerNullableScalarRelationFilter, Prisma.PartnerWhereInput> | null
   tourSchedule?: Prisma.XOR<Prisma.TourScheduleNullableScalarRelationFilter, Prisma.TourScheduleWhereInput> | null
+  platformTransfers?: Prisma.PlatformTransferListRelationFilter
 }, "id">
 
 export type BookingOrderByWithAggregationInput = {
@@ -361,6 +364,7 @@ export type BookingCreateInput = {
   user?: Prisma.UserCreateNestedOneWithoutBookingsInput
   partner?: Prisma.PartnerCreateNestedOneWithoutBookingsInput
   tourSchedule?: Prisma.TourScheduleCreateNestedOneWithoutBookingsInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateInput = {
@@ -375,6 +379,7 @@ export type BookingUncheckedCreateInput = {
   createdAt?: Date | string | null
   partnerId?: bigint | number | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUpdateInput = {
@@ -389,6 +394,7 @@ export type BookingUpdateInput = {
   user?: Prisma.UserUpdateOneWithoutBookingsNestedInput
   partner?: Prisma.PartnerUpdateOneWithoutBookingsNestedInput
   tourSchedule?: Prisma.TourScheduleUpdateOneWithoutBookingsNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateInput = {
@@ -403,6 +409,7 @@ export type BookingUncheckedUpdateInput = {
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   partnerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingCreateManyInput = {
@@ -511,6 +518,11 @@ export type BookingSumOrderByAggregateInput = {
   partnerId?: Prisma.SortOrder
 }
 
+export type BookingScalarRelationFilter = {
+  is?: Prisma.BookingWhereInput
+  isNot?: Prisma.BookingWhereInput
+}
+
 export type BookingCreateNestedManyWithoutUserInput = {
   create?: Prisma.XOR<Prisma.BookingCreateWithoutUserInput, Prisma.BookingUncheckedCreateWithoutUserInput> | Prisma.BookingCreateWithoutUserInput[] | Prisma.BookingUncheckedCreateWithoutUserInput[]
   connectOrCreate?: Prisma.BookingCreateOrConnectWithoutUserInput | Prisma.BookingCreateOrConnectWithoutUserInput[]
@@ -615,6 +627,20 @@ export type BookingUncheckedUpdateManyWithoutPartnerNestedInput = {
   deleteMany?: Prisma.BookingScalarWhereInput | Prisma.BookingScalarWhereInput[]
 }
 
+export type BookingCreateNestedOneWithoutPlatformTransfersInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutPlatformTransfersInput, Prisma.BookingUncheckedCreateWithoutPlatformTransfersInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutPlatformTransfersInput
+  connect?: Prisma.BookingWhereUniqueInput
+}
+
+export type BookingUpdateOneRequiredWithoutPlatformTransfersNestedInput = {
+  create?: Prisma.XOR<Prisma.BookingCreateWithoutPlatformTransfersInput, Prisma.BookingUncheckedCreateWithoutPlatformTransfersInput>
+  connectOrCreate?: Prisma.BookingCreateOrConnectWithoutPlatformTransfersInput
+  upsert?: Prisma.BookingUpsertWithoutPlatformTransfersInput
+  connect?: Prisma.BookingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BookingUpdateToOneWithWhereWithoutPlatformTransfersInput, Prisma.BookingUpdateWithoutPlatformTransfersInput>, Prisma.BookingUncheckedUpdateWithoutPlatformTransfersInput>
+}
+
 export type BookingCreateNestedManyWithoutTourScheduleInput = {
   create?: Prisma.XOR<Prisma.BookingCreateWithoutTourScheduleInput, Prisma.BookingUncheckedCreateWithoutTourScheduleInput> | Prisma.BookingCreateWithoutTourScheduleInput[] | Prisma.BookingUncheckedCreateWithoutTourScheduleInput[]
   connectOrCreate?: Prisma.BookingCreateOrConnectWithoutTourScheduleInput | Prisma.BookingCreateOrConnectWithoutTourScheduleInput[]
@@ -668,6 +694,7 @@ export type BookingCreateWithoutUserInput = {
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   partner?: Prisma.PartnerCreateNestedOneWithoutBookingsInput
   tourSchedule?: Prisma.TourScheduleCreateNestedOneWithoutBookingsInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutUserInput = {
@@ -681,6 +708,7 @@ export type BookingUncheckedCreateWithoutUserInput = {
   createdAt?: Date | string | null
   partnerId?: bigint | number | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutUserInput = {
@@ -736,6 +764,7 @@ export type BookingCreateWithoutPaymentsInput = {
   user?: Prisma.UserCreateNestedOneWithoutBookingsInput
   partner?: Prisma.PartnerCreateNestedOneWithoutBookingsInput
   tourSchedule?: Prisma.TourScheduleCreateNestedOneWithoutBookingsInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutPaymentsInput = {
@@ -749,6 +778,7 @@ export type BookingUncheckedCreateWithoutPaymentsInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string | null
   partnerId?: bigint | number | null
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutPaymentsInput = {
@@ -778,6 +808,7 @@ export type BookingUpdateWithoutPaymentsInput = {
   user?: Prisma.UserUpdateOneWithoutBookingsNestedInput
   partner?: Prisma.PartnerUpdateOneWithoutBookingsNestedInput
   tourSchedule?: Prisma.TourScheduleUpdateOneWithoutBookingsNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutPaymentsInput = {
@@ -791,6 +822,7 @@ export type BookingUncheckedUpdateWithoutPaymentsInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   partnerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingCreateWithoutPartnerInput = {
@@ -804,6 +836,7 @@ export type BookingCreateWithoutPartnerInput = {
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   user?: Prisma.UserCreateNestedOneWithoutBookingsInput
   tourSchedule?: Prisma.TourScheduleCreateNestedOneWithoutBookingsInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutPartnerInput = {
@@ -817,6 +850,7 @@ export type BookingUncheckedCreateWithoutPartnerInput = {
   expiresAt?: Date | string | null
   createdAt?: Date | string | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutPartnerInput = {
@@ -845,6 +879,78 @@ export type BookingUpdateManyWithWhereWithoutPartnerInput = {
   data: Prisma.XOR<Prisma.BookingUpdateManyMutationInput, Prisma.BookingUncheckedUpdateManyWithoutPartnerInput>
 }
 
+export type BookingCreateWithoutPlatformTransfersInput = {
+  id?: bigint | number
+  seatsBooked?: number | null
+  pricePaid?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  currencyPaid?: string | null
+  status?: $Enums.BookingStatus | null
+  expiresAt?: Date | string | null
+  createdAt?: Date | string | null
+  payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
+  user?: Prisma.UserCreateNestedOneWithoutBookingsInput
+  partner?: Prisma.PartnerCreateNestedOneWithoutBookingsInput
+  tourSchedule?: Prisma.TourScheduleCreateNestedOneWithoutBookingsInput
+}
+
+export type BookingUncheckedCreateWithoutPlatformTransfersInput = {
+  id?: bigint | number
+  tourScheduleId?: bigint | number | null
+  customerId?: string | null
+  seatsBooked?: number | null
+  pricePaid?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  currencyPaid?: string | null
+  status?: $Enums.BookingStatus | null
+  expiresAt?: Date | string | null
+  createdAt?: Date | string | null
+  partnerId?: bigint | number | null
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
+}
+
+export type BookingCreateOrConnectWithoutPlatformTransfersInput = {
+  where: Prisma.BookingWhereUniqueInput
+  create: Prisma.XOR<Prisma.BookingCreateWithoutPlatformTransfersInput, Prisma.BookingUncheckedCreateWithoutPlatformTransfersInput>
+}
+
+export type BookingUpsertWithoutPlatformTransfersInput = {
+  update: Prisma.XOR<Prisma.BookingUpdateWithoutPlatformTransfersInput, Prisma.BookingUncheckedUpdateWithoutPlatformTransfersInput>
+  create: Prisma.XOR<Prisma.BookingCreateWithoutPlatformTransfersInput, Prisma.BookingUncheckedCreateWithoutPlatformTransfersInput>
+  where?: Prisma.BookingWhereInput
+}
+
+export type BookingUpdateToOneWithWhereWithoutPlatformTransfersInput = {
+  where?: Prisma.BookingWhereInput
+  data: Prisma.XOR<Prisma.BookingUpdateWithoutPlatformTransfersInput, Prisma.BookingUncheckedUpdateWithoutPlatformTransfersInput>
+}
+
+export type BookingUpdateWithoutPlatformTransfersInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  seatsBooked?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pricePaid?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  currencyPaid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.NullableEnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
+  user?: Prisma.UserUpdateOneWithoutBookingsNestedInput
+  partner?: Prisma.PartnerUpdateOneWithoutBookingsNestedInput
+  tourSchedule?: Prisma.TourScheduleUpdateOneWithoutBookingsNestedInput
+}
+
+export type BookingUncheckedUpdateWithoutPlatformTransfersInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  tourScheduleId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  customerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  seatsBooked?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  pricePaid?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  currencyPaid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.NullableEnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  partnerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
+}
+
 export type BookingCreateWithoutTourScheduleInput = {
   id?: bigint | number
   seatsBooked?: number | null
@@ -856,6 +962,7 @@ export type BookingCreateWithoutTourScheduleInput = {
   payments?: Prisma.PaymentCreateNestedManyWithoutBookingInput
   user?: Prisma.UserCreateNestedOneWithoutBookingsInput
   partner?: Prisma.PartnerCreateNestedOneWithoutBookingsInput
+  platformTransfers?: Prisma.PlatformTransferCreateNestedManyWithoutBookingInput
 }
 
 export type BookingUncheckedCreateWithoutTourScheduleInput = {
@@ -869,6 +976,7 @@ export type BookingUncheckedCreateWithoutTourScheduleInput = {
   createdAt?: Date | string | null
   partnerId?: bigint | number | null
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutBookingInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedCreateNestedManyWithoutBookingInput
 }
 
 export type BookingCreateOrConnectWithoutTourScheduleInput = {
@@ -920,6 +1028,7 @@ export type BookingUpdateWithoutUserInput = {
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   partner?: Prisma.PartnerUpdateOneWithoutBookingsNestedInput
   tourSchedule?: Prisma.TourScheduleUpdateOneWithoutBookingsNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutUserInput = {
@@ -933,6 +1042,7 @@ export type BookingUncheckedUpdateWithoutUserInput = {
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   partnerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutUserInput = {
@@ -970,6 +1080,7 @@ export type BookingUpdateWithoutPartnerInput = {
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   user?: Prisma.UserUpdateOneWithoutBookingsNestedInput
   tourSchedule?: Prisma.TourScheduleUpdateOneWithoutBookingsNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutPartnerInput = {
@@ -983,6 +1094,7 @@ export type BookingUncheckedUpdateWithoutPartnerInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutPartnerInput = {
@@ -1020,6 +1132,7 @@ export type BookingUpdateWithoutTourScheduleInput = {
   payments?: Prisma.PaymentUpdateManyWithoutBookingNestedInput
   user?: Prisma.UserUpdateOneWithoutBookingsNestedInput
   partner?: Prisma.PartnerUpdateOneWithoutBookingsNestedInput
+  platformTransfers?: Prisma.PlatformTransferUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateWithoutTourScheduleInput = {
@@ -1033,6 +1146,7 @@ export type BookingUncheckedUpdateWithoutTourScheduleInput = {
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   partnerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutBookingNestedInput
+  platformTransfers?: Prisma.PlatformTransferUncheckedUpdateManyWithoutBookingNestedInput
 }
 
 export type BookingUncheckedUpdateManyWithoutTourScheduleInput = {
@@ -1054,10 +1168,12 @@ export type BookingUncheckedUpdateManyWithoutTourScheduleInput = {
 
 export type BookingCountOutputType = {
   payments: number
+  platformTransfers: number
 }
 
 export type BookingCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   payments?: boolean | BookingCountOutputTypeCountPaymentsArgs
+  platformTransfers?: boolean | BookingCountOutputTypeCountPlatformTransfersArgs
 }
 
 /**
@@ -1077,6 +1193,13 @@ export type BookingCountOutputTypeCountPaymentsArgs<ExtArgs extends runtime.Type
   where?: Prisma.PaymentWhereInput
 }
 
+/**
+ * BookingCountOutputType without action
+ */
+export type BookingCountOutputTypeCountPlatformTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlatformTransferWhereInput
+}
+
 
 export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1093,6 +1216,7 @@ export type BookingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   user?: boolean | Prisma.Booking$userArgs<ExtArgs>
   partner?: boolean | Prisma.Booking$partnerArgs<ExtArgs>
   tourSchedule?: boolean | Prisma.Booking$tourScheduleArgs<ExtArgs>
+  platformTransfers?: boolean | Prisma.Booking$platformTransfersArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["booking"]>
 
@@ -1147,6 +1271,7 @@ export type BookingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   user?: boolean | Prisma.Booking$userArgs<ExtArgs>
   partner?: boolean | Prisma.Booking$partnerArgs<ExtArgs>
   tourSchedule?: boolean | Prisma.Booking$tourScheduleArgs<ExtArgs>
+  platformTransfers?: boolean | Prisma.Booking$platformTransfersArgs<ExtArgs>
   _count?: boolean | Prisma.BookingCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type BookingIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1167,6 +1292,7 @@ export type $BookingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     user: Prisma.$UserPayload<ExtArgs> | null
     partner: Prisma.$PartnerPayload<ExtArgs> | null
     tourSchedule: Prisma.$TourSchedulePayload<ExtArgs> | null
+    platformTransfers: Prisma.$PlatformTransferPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: bigint
@@ -1577,6 +1703,7 @@ export interface Prisma__BookingClient<T, Null = never, ExtArgs extends runtime.
   user<T extends Prisma.Booking$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   partner<T extends Prisma.Booking$partnerArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$partnerArgs<ExtArgs>>): Prisma.Prisma__PartnerClient<runtime.Types.Result.GetResult<Prisma.$PartnerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   tourSchedule<T extends Prisma.Booking$tourScheduleArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$tourScheduleArgs<ExtArgs>>): Prisma.Prisma__TourScheduleClient<runtime.Types.Result.GetResult<Prisma.$TourSchedulePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  platformTransfers<T extends Prisma.Booking$platformTransfersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Booking$platformTransfersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2095,6 +2222,30 @@ export type Booking$tourScheduleArgs<ExtArgs extends runtime.Types.Extensions.In
    */
   include?: Prisma.TourScheduleInclude<ExtArgs> | null
   where?: Prisma.TourScheduleWhereInput
+}
+
+/**
+ * Booking.platformTransfers
+ */
+export type Booking$platformTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformTransfer
+   */
+  select?: Prisma.PlatformTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformTransfer
+   */
+  omit?: Prisma.PlatformTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformTransferInclude<ExtArgs> | null
+  where?: Prisma.PlatformTransferWhereInput
+  orderBy?: Prisma.PlatformTransferOrderByWithRelationInput | Prisma.PlatformTransferOrderByWithRelationInput[]
+  cursor?: Prisma.PlatformTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlatformTransferScalarFieldEnum | Prisma.PlatformTransferScalarFieldEnum[]
 }
 
 /**

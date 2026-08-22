@@ -88,6 +88,7 @@ export const ModelName = {
   AvailabilityRule: 'AvailabilityRule',
   Booking: 'Booking',
   Partner: 'Partner',
+  PlatformTransfer: 'PlatformTransfer',
   Review: 'Review',
   TourGuide: 'TourGuide',
   TourLocation: 'TourLocation',
@@ -676,10 +677,29 @@ export const PartnerScalarFieldEnum = {
   contactEmail: 'contactEmail',
   websiteUrl: 'websiteUrl',
   isVerified: 'isVerified',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  stripeAccountId: 'stripeAccountId',
+  stripeOnboardingStatus: 'stripeOnboardingStatus',
+  stripeAccountCreatedAt: 'stripeAccountCreatedAt'
 } as const
 
 export type PartnerScalarFieldEnum = (typeof PartnerScalarFieldEnum)[keyof typeof PartnerScalarFieldEnum]
+
+
+export const PlatformTransferScalarFieldEnum = {
+  id: 'id',
+  bookingId: 'bookingId',
+  partnerId: 'partnerId',
+  grossAmount: 'grossAmount',
+  platformFee: 'platformFee',
+  netAmount: 'netAmount',
+  stripeTransferId: 'stripeTransferId',
+  status: 'status',
+  createdAt: 'createdAt',
+  succeededAt: 'succeededAt'
+} as const
+
+export type PlatformTransferScalarFieldEnum = (typeof PlatformTransferScalarFieldEnum)[keyof typeof PlatformTransferScalarFieldEnum]
 
 
 export const ReviewScalarFieldEnum = {

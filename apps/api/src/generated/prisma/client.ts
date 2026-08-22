@@ -225,6 +225,11 @@ export type Booking = Prisma.BookingModel
  */
 export type Partner = Prisma.PartnerModel
 /**
+ * Model PlatformTransfer
+ * 
+ */
+export type PlatformTransfer = Prisma.PlatformTransferModel
+/**
  * Model Review
  * 
  */

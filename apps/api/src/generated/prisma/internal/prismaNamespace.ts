@@ -421,6 +421,7 @@ export const ModelName = {
   AvailabilityRule: 'AvailabilityRule',
   Booking: 'Booking',
   Partner: 'Partner',
+  PlatformTransfer: 'PlatformTransfer',
   Review: 'Review',
   TourGuide: 'TourGuide',
   TourLocation: 'TourLocation',
@@ -443,7 +444,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "auditLogEntry" | "customOauthProvider" | "flowState" | "identity" | "instance" | "mfaAmrClaim" | "mfaChallenge" | "mfaFactor" | "oauthAuthorization" | "oauthClientState" | "oauthClient" | "oauthConsent" | "oneTimeToken" | "refreshToken" | "samlProvider" | "samlRelayState" | "schemaMigration" | "session" | "ssoDomain" | "ssoProvider" | "user" | "webauthnChallenge" | "webauthnCredential" | "legacyStaff" | "legacyTour" | "legacyUser" | "spatialRefSys" | "profile" | "payment" | "stripeWebhookEvent" | "locationTimezone" | "location" | "timezone" | "availabilityException" | "availabilityRule" | "booking" | "partner" | "review" | "tourGuide" | "tourLocation" | "tourMedia" | "tourSchedule" | "tour" | "wishlist"
+    modelProps: "auditLogEntry" | "customOauthProvider" | "flowState" | "identity" | "instance" | "mfaAmrClaim" | "mfaChallenge" | "mfaFactor" | "oauthAuthorization" | "oauthClientState" | "oauthClient" | "oauthConsent" | "oneTimeToken" | "refreshToken" | "samlProvider" | "samlRelayState" | "schemaMigration" | "session" | "ssoDomain" | "ssoProvider" | "user" | "webauthnChallenge" | "webauthnCredential" | "legacyStaff" | "legacyTour" | "legacyUser" | "spatialRefSys" | "profile" | "payment" | "stripeWebhookEvent" | "locationTimezone" | "location" | "timezone" | "availabilityException" | "availabilityRule" | "booking" | "partner" | "platformTransfer" | "review" | "tourGuide" | "tourLocation" | "tourMedia" | "tourSchedule" | "tour" | "wishlist"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3185,6 +3186,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PlatformTransfer: {
+      payload: Prisma.$PlatformTransferPayload<ExtArgs>
+      fields: Prisma.PlatformTransferFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlatformTransferFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlatformTransferFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>
+        }
+        findFirst: {
+          args: Prisma.PlatformTransferFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlatformTransferFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>
+        }
+        findMany: {
+          args: Prisma.PlatformTransferFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>[]
+        }
+        create: {
+          args: Prisma.PlatformTransferCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>
+        }
+        createMany: {
+          args: Prisma.PlatformTransferCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlatformTransferCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>[]
+        }
+        delete: {
+          args: Prisma.PlatformTransferDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>
+        }
+        update: {
+          args: Prisma.PlatformTransferUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlatformTransferDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlatformTransferUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlatformTransferUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlatformTransferUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformTransferPayload>
+        }
+        aggregate: {
+          args: Prisma.PlatformTransferAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlatformTransfer>
+        }
+        groupBy: {
+          args: Prisma.PlatformTransferGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformTransferGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlatformTransferCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformTransferCountAggregateOutputType> | number
+        }
+      }
+    }
     Review: {
       payload: Prisma.$ReviewPayload<ExtArgs>
       fields: Prisma.ReviewFieldRefs
@@ -4305,10 +4380,29 @@ export const PartnerScalarFieldEnum = {
   contactEmail: 'contactEmail',
   websiteUrl: 'websiteUrl',
   isVerified: 'isVerified',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  stripeAccountId: 'stripeAccountId',
+  stripeOnboardingStatus: 'stripeOnboardingStatus',
+  stripeAccountCreatedAt: 'stripeAccountCreatedAt'
 } as const
 
 export type PartnerScalarFieldEnum = (typeof PartnerScalarFieldEnum)[keyof typeof PartnerScalarFieldEnum]
+
+
+export const PlatformTransferScalarFieldEnum = {
+  id: 'id',
+  bookingId: 'bookingId',
+  partnerId: 'partnerId',
+  grossAmount: 'grossAmount',
+  platformFee: 'platformFee',
+  netAmount: 'netAmount',
+  stripeTransferId: 'stripeTransferId',
+  status: 'status',
+  createdAt: 'createdAt',
+  succeededAt: 'succeededAt'
+} as const
+
+export type PlatformTransferScalarFieldEnum = (typeof PlatformTransferScalarFieldEnum)[keyof typeof PlatformTransferScalarFieldEnum]
 
 
 export const ReviewScalarFieldEnum = {
@@ -4748,6 +4842,20 @@ export type ListEnumBookingStatusFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
+ * Reference to a field of type 'TransferStatus'
+ */
+export type EnumTransferStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TransferStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'TransferStatus[]'
+ */
+export type ListEnumTransferStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TransferStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'MediaType'
  */
 export type EnumMediaTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MediaType'>
@@ -4949,6 +5057,7 @@ export type GlobalOmitConfig = {
   availabilityRule?: Prisma.AvailabilityRuleOmit
   booking?: Prisma.BookingOmit
   partner?: Prisma.PartnerOmit
+  platformTransfer?: Prisma.PlatformTransferOmit
   review?: Prisma.ReviewOmit
   tourGuide?: Prisma.TourGuideOmit
   tourLocation?: Prisma.TourLocationOmit
