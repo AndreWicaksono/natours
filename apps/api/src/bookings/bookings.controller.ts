@@ -74,7 +74,15 @@ export class BookingsController {
     return this.bookingsService.resumePayment(user, id);
   }
 
-  // In bookings.controller.ts
+  @Patch(':id/check-in')
+  @Roles(AppRole.CUSTOMER, AppRole.ADMIN, AppRole.PARTNER_ADMIN)
+  async checkIn(
+    @CurrentUser() user: UserPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.bookingsService.checkIn(user, id);
+  }
+
   @Post('test-expire')
   @Public()
   async testExpire() {

@@ -983,13 +983,16 @@ enum AppRole {
 }
 
 enum BookingStatus {
-  PENDING   @map("pending")
-  CONFIRMED @map("confirmed")
-  CANCELLED @map("cancelled")
-  EXPIRED   @map("expired")
+  PENDING    @map("pending")
+  CONFIRMED  @map("confirmed")
+  ONGOING    @map("ongoing")
+  COMPLETED  @map("completed")
+  CANCELLED  @map("cancelled")
+  EXPIRED    @map("expired")
+  NO_SHOW    @map("no_show")
 
-  @@map("booking_status")
   @@schema("public")
+  @@map("booking_status")
 }
 
 enum LocationLevel {

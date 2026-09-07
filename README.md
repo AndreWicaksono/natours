@@ -61,35 +61,62 @@ This model keeps the platform aligned with partner success — when partners ear
 
 ```mermaid
 graph TD
-    A[Customer browses tours] --> B[Customer selects a tour & date]
-    B --> C[Customer books & pays via Stripe]
-    C --> D[Platform confirms booking]
-    D --> E[Seats are reserved]
-    E --> F[Stripe splits payment]
-    F --> G[Partner receives net amount]
-    G --> H[Partner's dashboard updates]
-    H --> I[Customer receives confirmation]
+A[Customer browses tours] --> B[Customer selects a tour & date]
+B --> C[Customer books & pays via Stripe]
+C --> D[Platform confirms booking]
+D --> E[Seats are reserved]
+E --> F[Stripe splits payment]
+F --> G[Partner receives net amount]
+G --> H[Partner's dashboard updates]
+H --> I[Customer receives confirmation]
+I --> J[Customer checks in on tour start date]
+J --> K[Tour status becomes ONGOING]
+K --> L[Tour ends → status becomes COMPLETED]
+L --> M[Customer can leave a review]
+D --> N[No check-in after start date]
+N --> O[Status becomes NO_SHOW]
 ```
 
 ### Detailed Flow
 
-| Step | Actor    | Action                                    | System Response                                                  |
-| ---- | -------- | ----------------------------------------- | ---------------------------------------------------------------- |
-| 1    | Partner  | Creates a tour with availability rules    | Tour is published and visible to customers                       |
-| 2    | Partner  | Completes Stripe Connect onboarding       | Partner can now receive payouts                                  |
-| 3    | Customer | Browses tours and selects a date/time     | Availability endpoint validates rules & exceptions               |
-| 4    | Customer | Books the tour and pays                   | Booking is created (status: `PENDING`), Stripe session generated |
-| 5    | Customer | Completes payment on Stripe               | Webhook confirms payment, booking becomes `CONFIRMED`            |
-| 6    | Platform | Calculates commission and splits payment  | `PlatformTransfer` record created                                |
-| 7    | Partner  | Views earnings and transfers in dashboard | Partner can see all transactions                                 |
+| Step | Actor    | Action                                                                | System Response                                                  |
+| :--- | :------- | :-------------------------------------------------------------------- | :--------------------------------------------------------------- |
+| 1    | Partner  | Creates a tour with availability rules                                | Tour is published and visible to customers                       |
+| 2    | Partner  | Completes Stripe Connect onboarding                                   | Partner can now receive payouts                                  |
+| 3    | Customer | Browses tours and selects a date/time                                 | Availability endpoint validates rules & exceptions               |
+| 4    | Customer | Books the tour and pays                                               | Booking is created (status: `PENDING`), Stripe session generated |
+| 5    | Customer | Completes payment on Stripe                                           | Webhook confirms payment, booking becomes `CONFIRMED`            |
+| 6    | Platform | Calculates commission and splits payment                              | `PlatformTransfer` record created                                |
+| 7    | Customer | Checks in on the tour start date (via `PATCH /bookings/:id/check-in`) | Booking becomes `ONGOING`                                        |
+| 8    | System   | Auto-transition via cron job after tour ends                          | `ONGOING` → `COMPLETED`                                          |
+| 9    | System   | Auto-transition via cron job if no check-in after start date          | `CONFIRMED` → `NO_SHOW`                                          |
+| 10   | Customer | Leaves a review for the completed tour                                | Review is stored and average rating updated                      |
+| 11   | Partner  | Views earnings and transfers in dashboard                             | Partner can see all transactions and feedback                    |
 
 ---
+
+### Booking Status Lifecycle
+
+```text
+PENDING
+   │ (payment confirmed)
+   ▼
+CONFIRMED
+   │ (tour start date/time arrives)
+   ├──────────────────────────────────────┐
+   │ (customer checks in manually)        │ (no check-in, cron job runs)
+   ▼                                      ▼
+ONGOING                                 NO_SHOW
+   │ (tour end date/time passes)
+   ▼
+COMPLETED
+```
 
 ## 🏗️ Architecture
 
 ### Monorepo Structure
 
-```
+```text
 natours/
 ├── apps/
 │   ├── api/                    # NestJS backend (REST API)
@@ -129,14 +156,15 @@ natours/
 
 ### Key Design Decisions
 
-| Decision                                     | Why                                                                                                 |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Separate API from Frontend**               | Allows independent scaling, mobile app support, and third-party API access                          |
-| **Supabase Auth + NestJS JWT**               | Supabase handles user management; NestJS validates tokens locally (no network call)                 |
-| **Native PostgreSQL (Prisma) over HTTP API** | Lower latency (~55ms vs ~120ms) for database operations                                             |
-| **Stripe Connect**                           | Industry-standard for marketplace payments; handles KYC, onboarding, and payouts                    |
-| **RLS Bypass**                               | NestJS uses `service_role` key, bypassing RLS — all authorization logic is in the application layer |
-| **On-demand Tour Schedules**                 | `tour_schedules` are created only when the first booking is made, avoiding database bloat           |
+| Decision                                     | Why                                                                                                                                                                                     |
+| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Separate API from Frontend**               | Allows independent scaling, mobile app support, and third-party API access.                                                                                                             |
+| **Supabase Auth + NestJS JWT**               | Supabase handles user management; NestJS validates tokens locally (no network call).                                                                                                    |
+| **Native PostgreSQL (Prisma) over HTTP API** | Lower latency (~55ms vs ~120ms) for database operations.                                                                                                                                |
+| **Stripe Connect**                           | Industry-standard for marketplace payments; handles KYC, onboarding, and payouts.                                                                                                       |
+| **RLS Bypass**                               | NestJS uses `service_role` key, bypassing RLS — all authorization logic is in the application layer.                                                                                    |
+| **On-demand Tour Schedules**                 | `tour_schedules` are created only when the first booking is made, avoiding database bloat.                                                                                              |
+| **Check-in for attendance tracking**         | `CONFIRMED` → `ONGOING` requires manual check-in; auto `NO_SHOW` if no check-in after start date. Provides accurate attendance data and enables post-tour actions (reviews, analytics). |
 
 ---
 
@@ -185,29 +213,29 @@ The `billing.platform_transfers` table tracks every financial transaction:
 
 ### Core Tables
 
-| Schema    | Table                     | Purpose                                                                            |
-| --------- | ------------------------- | ---------------------------------------------------------------------------------- |
-| `tour`    | `partners`                | Tour operators / companies                                                         |
-| `tour`    | `tours`                   | Tour listings (name, price, difficulty, description)                               |
-| `tour`    | `availability_rules`      | Recurring availability (days of week, date range, start time)                      |
-| `tour`    | `availability_exceptions` | Blackout dates (overrides rules)                                                   |
-| `tour`    | `tour_schedules`          | Created on-demand (seats available per departure)                                  |
-| `tour`    | `bookings`                | Customer reservations with status (`PENDING`, `CONFIRMED`, `CANCELLED`, `EXPIRED`) |
-| `tour`    | `reviews`                 | Customer reviews and ratings                                                       |
-| `account` | `profiles`                | User profiles with roles (`CUSTOMER`, `GUIDE`, `PARTNER_ADMIN`, `ADMIN`)           |
-| `billing` | `payments`                | Payment records (Stripe session ID, status)                                        |
-| `billing` | `platform_transfers`      | Financial tracking for Stripe Connect splits                                       |
-| `billing` | `stripe_webhook_events`   | Idempotency tracking for webhooks                                                  |
+| Schema    | Table                     | Purpose                                                                                                               |
+| --------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `tour`    | `partners`                | Tour operators / companies                                                                                            |
+| `tour`    | `tours`                   | Tour listings (name, price, difficulty, description)                                                                  |
+| `tour`    | `availability_rules`      | Recurring availability (days of week, date range, start time)                                                         |
+| `tour`    | `availability_exceptions` | Blackout dates (overrides rules)                                                                                      |
+| `tour`    | `tour_schedules`          | Created on-demand (seats available per departure)                                                                     |
+| `tour`    | `bookings`                | Customer reservations with status (`PENDING`, `CONFIRMED`, `ONGOING`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `NO_SHOW`) |
+| `tour`    | `reviews`                 | Customer reviews and ratings                                                                                          |
+| `account` | `profiles`                | User profiles with roles (`CUSTOMER`, `GUIDE`, `PARTNER_ADMIN`, `ADMIN`)                                              |
+| `billing` | `payments`                | Payment records (Stripe session ID, status)                                                                           |
+| `billing` | `platform_transfers`      | Financial tracking for Stripe Connect splits                                                                          |
+| `billing` | `stripe_webhook_events`   | Idempotency tracking for webhooks                                                                                     |
 
 ### Enums
 
-| Enum              | Values                                                      |
-| ----------------- | ----------------------------------------------------------- |
-| `app_role`        | `CUSTOMER`, `GUIDE`, `LEAD_GUIDE`, `ADMIN`, `PARTNER_ADMIN` |
-| `booking_status`  | `PENDING`, `CONFIRMED`, `CANCELLED`, `EXPIRED`              |
-| `tour_difficulty` | `EASY`, `MEDIUM`, `DIFFICULT`                               |
-| `tour_status`     | `COMING_SOON`, `DRAFT`, `LIVE`                              |
-| `TransferStatus`  | `PENDING`, `SUCCEEDED`, `FAILED`                            |
+| Enum              | Values                                                                            |
+| ----------------- | --------------------------------------------------------------------------------- |
+| `app_role`        | `CUSTOMER`, `GUIDE`, `LEAD_GUIDE`, `ADMIN`, `PARTNER_ADMIN`                       |
+| `booking_status`  | `PENDING`, `CONFIRMED`, `ONGOING`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `NO_SHOW` |
+| `tour_difficulty` | `EASY`, `MEDIUM`, `DIFFICULT`                                                     |
+| `tour_status`     | `COMING_SOON`, `DRAFT`, `LIVE`                                                    |
+| `TransferStatus`  | `PENDING`, `SUCCEEDED`, `FAILED`                                                  |
 
 ---
 
@@ -396,6 +424,7 @@ npx prisma migrate resolve --applied 1_add_transfer_status
 - `POST /bookings` – Create a new booking
 - `GET /bookings/:id` – Get booking details
 - `PATCH /bookings/:id/cancel` – Cancel a booking
+- `PATCH /bookings/:id/check-in` – Check in for a tour (customer only, requires `CONFIRMED` status)
 
 #### Payments
 
@@ -449,7 +478,7 @@ pnpm test:coverage
 The partner dashboard (available in the Internal Dashboard app) provides:
 
 - **Tour Management** – Create, edit, publish, and archive tours
-- **Booking Overview** – Real-time booking status and customer details
+- **Booking Overview** – Real-time booking status and customer details (including `ONGOING`, `COMPLETED`, and `NO_SHOW` statuses)
 - **Availability Management** – Set recurring rules and blackout dates
 - **Financial Insights** – Earnings, pending payouts, and transaction history
 - **Reviews & Ratings** – Customer feedback and average ratings
@@ -528,4 +557,4 @@ _Software Engineer · Nix Enthusiast_
 
 ---
 
-**Last Updated**: August 2026
+**Last Updated**: September 7, 2026

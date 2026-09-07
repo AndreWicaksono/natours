@@ -102,8 +102,11 @@ export type AppRole = (typeof AppRole)[keyof typeof AppRole]
 export const BookingStatus = {
   PENDING: 'PENDING',
   CONFIRMED: 'CONFIRMED',
+  ONGOING: 'ONGOING',
+  COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
-  EXPIRED: 'EXPIRED'
+  EXPIRED: 'EXPIRED',
+  NO_SHOW: 'NO_SHOW'
 } as const
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus]

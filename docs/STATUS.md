@@ -14,16 +14,17 @@
 
 **Phase 1: Complete Core Business Modules (High Priority)**
 
-| Module               | Status               | Notes                                                                             |
-| :------------------- | :------------------- | :-------------------------------------------------------------------------------- |
-| **Authentication**   | ✅ Complete          | JWT with Supabase JWKS (ES256), `@Public()`, `@Roles()`, `@CurrentUser()`         |
-| **Tours Module**     | ✅ Complete          | CRUD, availability rules, exceptions, partner isolation, soft delete              |
-| **Bookings Module**  | ✅ Complete          | Create, confirm, cancel, expire, seat management, Stripe Checkout                 |
-| **Payments Module**  | ✅ Complete          | Stripe Connect integration, webhooks, platform transfers                          |
-| **Partners Module**  | ✅ Complete          | Stripe Connect onboarding, account linking, status tracking                       |
-| **Reviews Module**   | ⬜ **Next**          | Rating and review management for booked tours                                     |
-| **Wishlists Module** | ⬜ **After Reviews** | User wishlist management for favorite tours                                       |
-| **Profiles Module**  | ⬜ **Optional**      | User profile management (already has `Profile` model, may be handled by frontend) |
+| Module                         | Status               | Notes                                                                                     |
+| :----------------------------- | :------------------- | :---------------------------------------------------------------------------------------- |
+| **Authentication**             | ✅ Complete          | JWT with Supabase JWKS (ES256), `@Public()`, `@Roles()`, `@CurrentUser()`                 |
+| **Tours Module**               | ✅ Complete          | CRUD, availability rules, exceptions, partner isolation, soft delete                      |
+| **Bookings Module**            | ✅ Complete          | Create, confirm, cancel, expire, seat management, Stripe Checkout                         |
+| **Booking Status Enhancement** | ✅ Complete          | Added `ONGOING`, `COMPLETED`, `NO_SHOW` statuses; check-in endpoint; auto-status cron job |
+| **Payments Module**            | ✅ Complete          | Stripe Connect integration, webhooks, platform transfers                                  |
+| **Partners Module**            | ✅ Complete          | Stripe Connect onboarding, account linking, status tracking                               |
+| **Reviews Module**             | ⬜ **Next**          | Rating and review management for completed tours                                          |
+| **Wishlists Module**           | ⬜ **After Reviews** | User wishlist management for favorite tours                                               |
+| **Profiles Module**            | ⬜ **Optional**      | User profile management (already has `Profile` model, may be handled by frontend)         |
 
 **Current Focus**: Building the **Reviews Module** to allow customers to leave feedback on completed tours.
 
@@ -33,29 +34,31 @@
 
 ### Commit History (Most Recent First)
 
-| Date             | Commit                                                                          | Description                                                                                                                                                                                                      |
-| :--------------- | :------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Aug 23, 2026** | `docs: add comprehensive README with project overview and branding`             | Added detailed `README.md` with project overview, business model, architecture, Stripe Connect integration, database schema, migration guide, and Natours logo.                                                  |
-| **Aug 22, 2026** | `feat(api): implement Stripe Connect marketplace payment flow`                  | Full Stripe Connect integration: partner onboarding, payment splitting, `PlatformTransfer` tracking, webhooks for `transfer.created`, `account.updated`, `charge.refunded`, and `payment_intent.payment_failed`. |
-| **Aug 21, 2026** | `fix(api): complete payment status synchronization and webhook handling`        | Fixed payment status updates across all scenarios: success, failure, refund, cancellation, expiration. Added `test-expire` endpoint for manual testing.                                                          |
-| **Aug 21, 2026** | `feat(api): implement complete Bookings module with Stripe payment integration` | Complete booking lifecycle: availability checking, on-demand schedule creation, Stripe Checkout, webhook handling, expiration cron job, and `PaymentsService`.                                                   |
-| **Aug 19, 2026** | `fix(api): resolve enum mapping and BigInt serialization issues`                | Fixed `TourDifficulty` enum mapping with `@@map`, added `BigIntInterceptor` to handle `BigInt` serialization, regenerated Prisma Client.                                                                         |
-| **Jul 8, 2026**  | `feat(api): implement authentication and core tours module`                     | JWT authentication with JWKS (ES256), `JwtAuthGuard`, `@Roles()`, `@Public()`, `@CurrentUser()`, `ToursModule` with CRUD operations, partner isolation, role-based access, and soft delete.                      |
-| **Jul 8, 2026**  | `feat(api): introspect full database schema for all schemas`                    | Complete Prisma schema with models from `account`, `auth`, `billing`, `geography`, `public`, `tour`.                                                                                                             |
-| **Jul 7, 2026**  | `feat(api): integrate Prisma ORM with Supabase database`                        | Prisma setup: `db pull`, `moduleFormat: "cjs"`, Session Pooler connection, `schemas = ["public", "auth"]`, generated Prisma Client.                                                                              |
-| **Jul 6, 2026**  | `feat(api): scaffold NestJS backend app in monorepo`                            | Generated NestJS app in `apps/api` using `@nestjs/cli` with `pnpm`.                                                                                                                                              |
+| Date             | Commit                                                                             | Description                                                                                                                                                                                                                   |
+| :--------------- | :--------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sep 7, 2026**  | `feat(api): enhance booking status flow with check-in and auto-status transitions` | Added `ONGOING`, `COMPLETED`, `NO_SHOW` booking statuses; implemented check-in endpoint; added daily cron job to auto-transition `CONFIRMED → NO_SHOW` and `ONGOING → COMPLETED`; updated Prisma schema and generated client. |
+| **Aug 23, 2026** | `docs: add comprehensive README with project overview and branding`                | Added detailed `README.md` with project overview, business model, architecture, Stripe Connect integration, database schema, migration guide, and Natours logo.                                                               |
+| **Aug 22, 2026** | `feat(api): implement Stripe Connect marketplace payment flow`                     | Full Stripe Connect integration: partner onboarding, payment splitting, `PlatformTransfer` tracking, webhooks for `transfer.created`, `account.updated`, `charge.refunded`, and `payment_intent.payment_failed`.              |
+| **Aug 21, 2026** | `fix(api): complete payment status synchronization and webhook handling`           | Fixed payment status updates across all scenarios: success, failure, refund, cancellation, expiration. Added `test-expire` endpoint for manual testing.                                                                       |
+| **Aug 21, 2026** | `feat(api): implement complete Bookings module with Stripe payment integration`    | Complete booking lifecycle: availability checking, on-demand schedule creation, Stripe Checkout, webhook handling, expiration cron job, and `PaymentsService`.                                                                |
+| **Aug 19, 2026** | `fix(api): resolve enum mapping and BigInt serialization issues`                   | Fixed `TourDifficulty` enum mapping with `@@map`, added `BigIntInterceptor` to handle `BigInt` serialization, regenerated Prisma Client.                                                                                      |
+| **Jul 8, 2026**  | `feat(api): implement authentication and core tours module`                        | JWT authentication with JWKS (ES256), `JwtAuthGuard`, `@Roles()`, `@Public()`, `@CurrentUser()`, `ToursModule` with CRUD operations, partner isolation, role-based access, and soft delete.                                   |
+| **Jul 8, 2026**  | `feat(api): introspect full database schema for all schemas`                       | Complete Prisma schema with models from `account`, `auth`, `billing`, `geography`, `public`, `tour`.                                                                                                                          |
+| **Jul 7, 2026**  | `feat(api): integrate Prisma ORM with Supabase database`                           | Prisma setup: `db pull`, `moduleFormat: "cjs"`, Session Pooler connection, `schemas = ["public", "auth"]`, generated Prisma Client.                                                                                           |
+| **Jul 6, 2026**  | `feat(api): scaffold NestJS backend app in monorepo`                               | Generated NestJS app in `apps/api` using `@nestjs/cli` with `pnpm`.                                                                                                                                                           |
 
 ---
 
 ## ⚠️ Caveats & Known Issues
 
-| Issue                         | Severity  | Description                                                                                                                                          | Workaround / Fix                                                       |
-| :---------------------------- | :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
-| **Stripe transfer ID update** | 🟡 Medium | `stripe_transfer_id` is initially set to `'pending'` and updated via `transfer.created` webhook. Works correctly but depends on webhook reliability. | ✅ Fixed – `transfer_group` is now used to link transfers to bookings. |
-| **`test-expire` endpoint**    | 🟢 Low    | Manual expiration endpoint exists for testing but is marked `@Public()` – safe for development.                                                      | Keep for testing, remove in production.                                |
-| **Migration history**         | 🟡 Medium | Baseline migration (`0_baseline`) contains unsupported SQL. Manual migrations (`1_add_transfer_status`) are used instead.                            | Documented in `README.md` → "Database Migration" → "Troubleshooting".  |
-| **Webhook events**            | 🟢 Low    | Several Stripe events are unhandled (`charge.succeeded`, `payment_intent.succeeded`, etc.) – they are informational and don't require action.        | ✅ Safe to ignore – they don't affect core flow.                       |
-| **`TransferStatus` enum**     | 🟢 Low    | Enum was created manually in the database via raw SQL. Prisma now recognizes it.                                                                     | ✅ Fixed – `prisma migrate resolve` marks it as applied.               |
+| Issue                         | Severity  | Description                                                                                                                                              | Workaround / Fix                                                       |
+| :---------------------------- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| **Stripe transfer ID update** | 🟡 Medium | `stripe_transfer_id` is initially set to `'pending'` and updated via `transfer.created` webhook. Works correctly but depends on webhook reliability.     | ✅ Fixed – `transfer_group` is now used to link transfers to bookings. |
+| **`test-expire` endpoint**    | 🟢 Low    | Manual expiration endpoint exists for testing but is marked `@Public()` – safe for development.                                                          | Keep for testing, remove in production.                                |
+| **Migration history**         | 🟡 Medium | Baseline migration (`0_baseline`) contains unsupported SQL. Manual migrations (`1_add_transfer_status`) are used instead.                                | Documented in `README.md` → "Database Migration" → "Troubleshooting".  |
+| **Webhook events**            | 🟢 Low    | Several Stripe events are unhandled (`charge.succeeded`, `payment_intent.succeeded`, etc.) – they are informational and don't require action.            | ✅ Safe to ignore – they don't affect core flow.                       |
+| **`TransferStatus` enum**     | 🟢 Low    | Enum was created manually in the database via raw SQL. Prisma now recognizes it.                                                                         | ✅ Fixed – `prisma migrate resolve` marks it as applied.               |
+| **`NO_SHOW` vs `COMPLETED`**  | 🟢 Low    | `NO_SHOW` is triggered automatically when check-in doesn't happen. `COMPLETED` is triggered after the tour ends. Both are handled by the daily cron job. | ✅ Implemented – both are automated.                                   |
 
 ---
 
@@ -69,7 +72,7 @@
 | :--------------------------- | :------------------------------------------------------------------------------------------- | :------ |
 | **1.1 Generate Module**      | `nest g module reviews`, `nest g controller reviews`, `nest g service reviews`               | 0.5 day |
 | **1.2 Define DTOs**          | `CreateReviewDto`, `UpdateReviewDto` with validation                                         | 0.5 day |
-| **1.3 Implement Service**    | Create, read, update, delete with business rules (one review per booking, must be confirmed) | 1 day   |
+| **1.3 Implement Service**    | Create, read, update, delete with business rules (one review per booking, must be completed) | 1 day   |
 | **1.4 Implement Controller** | Endpoints with role-based access (customer writes, admin moderates)                          | 0.5 day |
 | **1.5 Average Rating**       | Calculate and return average rating for a tour                                               | 0.5 day |
 | **1.6 Testing**              | Unit tests and manual testing with `curl`                                                    | 1 day   |
@@ -124,6 +127,7 @@
 ### Phase 1: Complete Core Business Modules
 
 - [x] Bookings Module
+- [x] Booking Status Enhancement (`ONGOING`, `COMPLETED`, `NO_SHOW`, check-in, cron job)
 - [x] Payments Module (Stripe integration)
 - [x] Partners Module
 - [ ] Reviews Module
@@ -166,6 +170,6 @@ After each meaningful commit, update the relevant sections:
 
 ## 🔄 Last Updated
 
-**Date**: August 23, 2026  
+**Date**: September 7, 2026  
 **Author**: Andre Wicaksono  
 **Branch**: `feat/nest-js`

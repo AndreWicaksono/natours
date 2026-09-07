@@ -538,6 +538,60 @@ export class BookingsService {
     );
   }
 
+  // --- Check-in a booking (customer confirms attendance) ---
+  async checkIn(user: UserPayload, bookingId: number) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        tourSchedule: {
+          include: {
+            tour: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${bookingId} not found.`);
+    }
+
+    // ✅ Check tourSchedule exists
+    if (!booking.tourSchedule) {
+      throw new BadRequestException(
+        'Tour schedule not found for this booking.',
+      );
+    }
+
+    // ✅ Check startDate exists
+    if (!booking.tourSchedule.startDate) {
+      throw new BadRequestException('Tour schedule has no start date.');
+    }
+
+    // Security: check access
+    this.checkAccess(user, booking);
+
+    // Must be CONFIRMED
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      throw new BadRequestException(
+        `Booking is ${booking.status}, cannot check in.`,
+      );
+    }
+
+    // Check-in must be on or after the tour start date
+    const now = new Date();
+    if (now < booking.tourSchedule.startDate) {
+      throw new BadRequestException(
+        'Check-in is only available on or after the tour start date.',
+      );
+    }
+
+    // Mark as ONGOING
+    return this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: BookingStatus.ONGOING },
+    });
+  }
+
   // --- Find all bookings ---
   async findAll(user: UserPayload) {
     const where: any = {};
