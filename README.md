@@ -381,6 +381,67 @@ After running raw SQL, **mark the migration as applied**:
 npx prisma migrate resolve --applied 1_add_transfer_status
 ```
 
+### ⚠️ Important: Excluding `auth` Schema from Migrations
+
+When generating migrations with `prisma migrate diff`, the command will include **all schemas** listed in your `datasource` block — including `auth`. However, the `auth` schema is managed by Supabase and **should never be modified by Prisma**.
+
+If you generate a migration and it contains any of the following, you **must remove them** before marking the migration as applied:
+
+- `CREATE TYPE "auth".*` – all auth enums
+- `ALTER TABLE "auth".*` – all auth table alterations
+- `DROP TYPE "auth".*` – all auth enum drops
+- `CREATE INDEX ... ON "auth".*` – auth indexes
+
+#### How to Clean a Migration File
+
+1. **Generate the migration diff**:
+
+   ```bash
+   npx prisma migrate diff \
+     --from-config-datasource \
+     --to-schema prisma/schema.prisma \
+     --script > prisma/migrations/your_migration/migration.sql
+   ```
+
+2. Open the generated SQL file and remove all lines related to the auth schema.
+
+3. Keep only the changes to your application schemas (account, billing, geography, public, tour).
+
+4. Mark the migration as applied:
+   ```bash
+   npx prisma migrate resolve --applied your_migration
+   ```
+
+#### Example: Before and After
+
+**Before** (contains auth changes — must be removed):
+
+```sql
+-- CreateEnum
+CREATE TYPE "auth"."AalLevel" AS ENUM ('aal1', 'aal2', 'aal3');
+
+-- AlterTable
+ALTER TABLE "auth"."sessions" ADD COLUMN "aal" "auth"."AalLevel";
+
+-- CreateIndex
+CREATE INDEX "idx_users_email" ON "auth"."users"("email");
+```
+
+**After** (cleaned up):
+
+```sql
+-- All auth-related statements removed.
+-- Only application schema changes remain.
+```
+
+#### Why This Is Necessary
+
+- The `auth` schema is managed by Supabase and should never be modified by Prisma
+- Keeping `auth` changes in migration history can break Supabase Auth during database restoration
+- This ensures that `prisma migrate deploy` only affects your application schemas
+
+**Note**: It is safe to keep foreign keys that reference `auth.users` (e.g., `profiles_id_fkey`, `bookings_customer_id_fkey`). These do not create `auth` tables — they only reference them.
+
 ### Migration Best Practices
 
 | Scenario                            | Command                                  | When to Use                               |
@@ -557,4 +618,4 @@ _Software Engineer · Nix Enthusiast_
 
 ---
 
-**Last Updated**: September 7, 2026
+**Last Updated**: September 9, 2026
