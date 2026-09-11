@@ -268,8 +268,18 @@ pnpm turbo dev
 Create `apps/api/.env` with:
 
 ```bash
-# Database
-DATABASE_URL="postgresql://postgres:[PASSWORD]@[HOST]:6543/postgres"
+# Database — points at LOCAL Supabase for day-to-day development.
+# This is what `pnpm turbo dev` and `prisma migrate dev` use. Get the
+# exact value from `supabase status` after `supabase start` (see
+# "Local Development Environment" below) — don't hardcode the default
+# shown here without checking, it can vary by config.
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+
+# Shadow database — used by `prisma migrate dev`/`migrate diff --from-migrations`
+# to compute schema diffs. Also points at local Supabase — see "Local
+# Development Environment" below for what this is and why it's separate
+# from DATABASE_URL even though both point at the same local instance.
+DATABASE_SHADOW_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
 # Supabase
 SUPABASE_URL="https://[PROJECT_REF].supabase.co"
@@ -286,42 +296,93 @@ APP_URL="http://localhost:3000"
 NODE_ENV="development"
 ```
 
+> **The live Supabase project's connection string never lives in `.env`.** It's only ever supplied transiently, inline, for the one command that's supposed to touch it — `DATABASE_URL="<live pooler URL>" npx prisma migrate deploy` — or as a platform-injected secret (Render/Railway env var) when the deployed API itself runs in production. Keeping it out of `.env` entirely makes "accidentally ran a dev command against production" structurally harder to do by mistake.
+
+> **Note on Prisma 7 + `.env`**: Prisma 7's CLI no longer auto-loads `.env` files (this changed from Prisma 6). `apps/api/prisma.config.ts` loads it explicitly via `dotenv`, anchored to its own directory with `path.resolve(__dirname, '.env')` — this matters in a monorepo, since a bare `import 'dotenv/config'` resolves relative to whatever directory a command happens to be invoked from, not to `apps/api/`. Make sure `dotenv` is listed in `apps/api/package.json`'s `devDependencies`.
+
 ### Setting Up the Database
 
+All schema development happens against **local Supabase**, never the hosted project directly (see "Database Migration" below for why).
+
 ```bash
-# Run Supabase migrations locally
-supabase start
+# Start the local Supabase stack (Postgres + Auth + Storage, via Docker)
+pnpm --filter natours-backend start   # runs `supabase start`
 
-# Generate Prisma client
-pnpm turbo run prisma:generate
+# Note the local DB URL it prints and put it in apps/api/.env as
+# DATABASE_SHADOW_URL (see "Environment Variables" above)
 
-# Push schema to database
-pnpm -F api run prisma:push
+cd apps/api
+
+# Apply the full tracked migration history to the fresh local database
+npx prisma migrate deploy
+
+# Generate the Prisma Client
+npx prisma generate
 ```
+
+`prisma db push` still has a place for quick throwaway prototyping (see the Troubleshooting section below), but the default path for anything you intend to keep is `migrate dev`/`migrate deploy` against local Supabase.
+
+---
+
+## 🧩 Local Development Environment
+
+### What "local Supabase" actually is
+
+`supabase start` runs Supabase's own Docker images on your machine: Postgres, plus the same Auth (`GoTrue`) and Storage services the hosted project runs, pre-loaded with Supabase's own system schemas (`auth`, `storage`, `realtime`) exactly as a fresh hosted project would have them. It is **not** a copy or sync of the live project — it's always a clean baseline, rebuilt from scratch by `supabase db reset`. Your own tables only exist in it once Prisma's migrations have been replayed into it.
+
+|                                    | Local Supabase                        | Live/hosted Supabase project                                                           |
+| :--------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------------- |
+| **Purpose**                        | Day-to-day development and testing    | Deploy target only                                                                     |
+| **Data**                           | Disposable — wiped and rebuilt freely | Real, persistent project state                                                         |
+| **Who can `CREATE`/`DROP` freely** | `postgres` role, full control         | Restricted — `postgres` isn't the true superuser (`supabase_auth_admin` owns `auth.*`) |
+| **Schema changes made how**        | `prisma migrate dev` while iterating  | `prisma migrate deploy` only, applying already-tested migrations                       |
+| **Safe to reset/break**            | Yes, constantly                       | Never                                                                                  |
+
+### What a shadow database is, and why Prisma needs one
+
+**What**: a second, temporary Postgres database that Prisma Migrate creates behind the scenes purely to _compute_ a migration diff — it's never used to store real application data, and your NestJS app never connects to it.
+
+**Why it's needed**: to know what your schema will look like _after_ applying a set of migrations, Prisma can't just read the SQL files and reason about them abstractly — SQL's actual effects (a column type change, an enum value addition, a constraint) depend on Postgres actually executing it. So `prisma migrate dev` and `prisma migrate diff --from-migrations` replay your entire migration history against a real, throwaway Postgres database, inspect the resulting structure, and diff _that_ against `schema.prisma` — that replayed copy is the shadow database. Without one, most of Migrate's commands can't run at all (this is exactly the class of `P3018`/`P1000` errors in the table below).
+
+**Why it has to be local, not a second hosted Supabase project**: creating/dropping a database is exactly the kind of privileged operation Supabase's pooler intentionally restricts on hosted projects (see the table above) — and even where it's technically possible, using a second billable cloud project as scratch space that gets wiped on every migration is wasteful and slow. A local Postgres instance you fully control is disposable by design, which is the actual property you want from something that exists purely to be repeatedly blown away and rebuilt.
+
+In this project, `DATABASE_SHADOW_URL` and `DATABASE_URL` happen to point at the _same_ local instance day-to-day — that's fine; the distinction that matters is conceptual (one is "where my app's data lives," the other is "Migrate's scratch space for computing diffs"), not that they need separate servers locally. What must never happen is either of them pointing at the live project during routine development.
 
 ---
 
 ## 🗄️ Database Migration
 
+> **🚨 All schema changes go through this workflow, with no exceptions — including "quick" fixes.** Every incident in this project's history so far (see "Incident History" at the end of this section) traces back to a schema change made directly against the live/hosted Supabase project — via the SQL Editor, Table Editor, or a misdirected CLI command — instead of through a tracked Prisma migration applied first to local Supabase. The live project is a **deploy target only**. Never open its SQL Editor or Table Editor to change schema, and never run `supabase db reset --linked` or `supabase db push` against it from a routine dev workflow.
+
 ### Standard Workflow (Recommended)
 
-For most schema changes, use Prisma's migration system:
+For all schema changes, work against **local Supabase** first:
 
 ```bash
+# 0. Make sure local Supabase is running
+pnpm --filter natours-backend start   # `supabase start`
+
 # 1. Update schema.prisma with your changes
-# 2. Generate and apply the migration locally
+# 2. Generate and apply the migration locally (uses DATABASE_SHADOW_URL
+#    for the shadow database — see Environment Variables above)
 cd apps/api
 npx prisma migrate dev --name describe_your_change
 
-# 3. Verify the migration
+# 3. Verify the migration applied cleanly and test your feature locally
 npx prisma migrate status
 
 # 4. Commit the migration file
 git add prisma/migrations/
 git commit -m "feat(db): add describe_your_change migration"
 
-# 5. Apply to production (deployment)
-npx prisma migrate deploy
+# 5. Only once you're confident locally: apply the same migration to the
+#    live project. This only APPLIES pending migrations — it never
+#    resets, drops, or touches anything already there. Use the Session
+#    Pooler URL (port 5432, sslmode=require), not the Transaction Pooler
+#    (6543) — Migrate needs a persistent-connection-style pooler, and the
+#    Direct Connection alternative requires a paid Supabase add-on.
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@[POOLER_HOST]:5432/postgres?sslmode=require" \
+  npx prisma migrate deploy
 ```
 
 ### Troubleshooting: When a Migration Doesn't Update the Table
@@ -335,36 +396,49 @@ Sometimes, `prisma migrate dev` fails due to schema drift or mismatched migratio
 **Solution 1: Use `prisma db push` (for prototyping)**
 
 ```bash
-# This applies schema changes directly without creating migration files
-# Use this for development only – never in production.
+# This applies schema changes directly without creating migration files.
+# LOCAL SUPABASE ONLY. Never point DATABASE_URL at the live/hosted
+# project when running this — db push has no migration history to
+# reconcile against and can diverge silently from what's tracked.
 npx prisma db push
 ```
 
-**Solution 2: Manually create a migration using `migrate diff` (for production)**
+**Solution 2: Manually create a migration using `migrate diff`**
 
 ```bash
 # 1. Create a migration directory
 mkdir -p prisma/migrations/1_add_your_change
 
-# 2. Generate SQL for the changes
+# 2. Generate SQL for the changes (compares live DB structure against
+#    schema.prisma — see prisma.config.ts's externalTables config below
+#    for why this no longer needs manual auth-schema line removal)
 npx prisma migrate diff \
   --from-config-datasource \
   --to-schema prisma/schema.prisma \
   --script > prisma/migrations/1_add_your_change/migration.sql
 
-# 3. Review and edit the SQL file
-# (Remove any unwanted changes, especially to auth schema)
+# 3. Review the SQL file. Confirm it contains no unexpected DROP
+#    statements against your own domain (a stray DROP TABLE/DROP TYPE
+#    is a signal something's wrong — investigate before proceeding,
+#    don't just delete the line and move on):
+grep -c "^DROP" prisma/migrations/1_add_your_change/migration.sql
 
-# 4. Mark the migration as applied
+# 4. Apply it against LOCAL Supabase first and confirm it works:
+psql "$DATABASE_SHADOW_URL" -f prisma/migrations/1_add_your_change/migration.sql
+
+# 5. Only after step 4 has actually succeeded, mark it applied so
+#    Prisma's bookkeeping matches reality:
 npx prisma migrate resolve --applied 1_add_your_change
 
-# 5. Verify
+# 6. Verify
 npx prisma migrate status
 ```
 
-**Solution 3: Raw SQL (last resort)**
+**⚠️ Never run `migrate resolve --applied` for a migration that hasn't actually been applied and verified.** `resolve --applied` only edits Prisma's own bookkeeping table (`_prisma_migrations`) — it does not run any SQL. Marking something "applied" that was never actually executed (or was applied somewhere other than where you think) creates a silent lie in the migration history: `migrate deploy` will skip it forever afterward, even if the real objects don't exist. This exact mistake is what caused the [Sep 2026 incident](#-incident-history) — treat step 5 above as strictly sequential, never done ahead of or instead of step 4.
 
-When Prisma migrations are blocked and you need to apply a critical change:
+**Solution 3: Raw SQL (last resort, same rule applies)**
+
+When Prisma migrations are genuinely blocked and a critical change must go in some other way:
 
 ```sql
 -- Example: Add an enum and update a column (our TransferStatus case)
@@ -375,93 +449,306 @@ ALTER COLUMN status SET DATA TYPE billing."TransferStatus"
 USING status::billing."TransferStatus";
 ```
 
-After running raw SQL, **mark the migration as applied**:
+Run this via `psql` against **local Supabase first**, confirm it, capture the exact SQL as a proper migration file in `prisma/migrations/`, apply that file to the live project, and only then:
 
 ```bash
 npx prisma migrate resolve --applied 1_add_transfer_status
 ```
 
-### ⚠️ Important: Excluding `auth` Schema from Migrations
+Never write directly into the live/hosted database's SQL Editor as a shortcut, even for something that feels trivial — every step above exists specifically to keep the live project, local Supabase, and the migration history files all telling the same story.
 
-When generating migrations with `prisma migrate diff`, the command will include **all schemas** listed in your `datasource` block — including `auth`. However, the `auth` schema is managed by Supabase and **should never be modified by Prisma**.
+### ⚠️ Important: Excluding Supabase's `auth` Objects from Migrations
 
-If you generate a migration and it contains any of the following, you **must remove them** before marking the migration as applied:
+Because `bookings`, `profiles`, etc. have foreign keys into `auth.users`, `schema.prisma`'s `datasource` block declares `auth` as one of the managed schemas (`schemas = ["account", "auth", "billing", "geography", "public", "tour"]`). That's necessary for the FK types to resolve — but it also means Prisma Migrate would otherwise try to manage (and, worse, reset/drop) tables and enum types that Supabase itself owns: `auth.users`, `auth.identities`, `auth.sessions`, the various OAuth-client and WebAuthn tables Supabase Auth has added over time, and their backing enum types (`aal_level`, `factor_type`, `oauth_client_type`, etc.). Those objects are owned by the `supabase_auth_admin` role, not `postgres` — Migrate attempting to reset/alter them fails with a "must be owner of ..." Postgres error (`P3016`), and worse, if a diff is generated and applied blind, it can genuinely drop and recreate them under the wrong name.
 
-- `CREATE TYPE "auth".*` – all auth enums
-- `ALTER TABLE "auth".*` – all auth table alterations
-- `DROP TYPE "auth".*` – all auth enum drops
-- `CREATE INDEX ... ON "auth".*` – auth indexes
+**The fix is `apps/api/prisma.config.ts`'s `externalTables` feature** — it tells Migrate "these objects exist, you can reference them, but never manage, reset, or diff them":
 
-#### How to Clean a Migration File
-
-1. **Generate the migration diff**:
-
-   ```bash
-   npx prisma migrate diff \
-     --from-config-datasource \
-     --to-schema prisma/schema.prisma \
-     --script > prisma/migrations/your_migration/migration.sql
-   ```
-
-2. Open the generated SQL file and remove all lines related to the auth schema.
-
-3. Keep only the changes to your application schemas (account, billing, geography, public, tour).
-
-4. Mark the migration as applied:
-   ```bash
-   npx prisma migrate resolve --applied your_migration
-   ```
-
-#### Example: Before and After
-
-**Before** (contains auth changes — must be removed):
-
-```sql
--- CreateEnum
-CREATE TYPE "auth"."AalLevel" AS ENUM ('aal1', 'aal2', 'aal3');
-
--- AlterTable
-ALTER TABLE "auth"."sessions" ADD COLUMN "aal" "auth"."AalLevel";
-
--- CreateIndex
-CREATE INDEX "idx_users_email" ON "auth"."users"("email");
+```ts
+export default defineConfig({
+  // ...
+  experimental: {
+    externalTables: true,
+  },
+  tables: {
+    external: [
+      "auth.users",
+      "auth.identities",
+      "auth.sessions",
+      "auth.refresh_tokens",
+      "auth.mfa_factors",
+      "auth.mfa_challenges",
+      "auth.mfa_amr_claims",
+      "auth.sso_providers",
+      "auth.sso_domains",
+      "auth.saml_providers",
+      "auth.saml_relay_states",
+      "auth.flow_state",
+      "auth.one_time_tokens",
+      "auth.audit_log_entries",
+      "auth.instances",
+      "auth.schema_migrations",
+      "auth.oauth_clients",
+      "auth.custom_oauth_providers",
+      "auth.oauth_authorizations",
+      "auth.oauth_client_states",
+      "auth.oauth_consents",
+      "auth.webauthn_challenges",
+      "auth.webauthn_credentials",
+    ],
+  },
+  enums: {
+    external: [
+      "auth.factor_type",
+      "auth.factor_status",
+      "auth.aal_level",
+      "auth.code_challenge_method",
+      "auth.one_time_token_type",
+      "auth.oauth_authorization_status",
+      "auth.oauth_client_type",
+      "auth.oauth_registration_type",
+      "auth.oauth_response_type",
+    ],
+  },
+});
 ```
 
-**After** (cleaned up):
+**If Supabase adds a new Auth feature later** (as happened with custom OAuth providers/WebAuthn mid-project) and a `migrate diff` or `db pull` surfaces new `auth.*` tables/enums you don't recognize as your own, add them here rather than letting them get diffed or, worse, dropped. A quick way to get the authoritative current list directly from a running instance:
 
-```sql
--- All auth-related statements removed.
--- Only application schema changes remain.
+```bash
+psql "$DATABASE_SHADOW_URL" -c "
+SELECT n.nspname, t.typname FROM pg_type t
+JOIN pg_namespace n ON n.oid = t.typnamespace
+WHERE n.nspname = 'auth' AND t.typtype = 'e';
+"
 ```
 
-#### Why This Is Necessary
-
-- The `auth` schema is managed by Supabase and should never be modified by Prisma
-- Keeping `auth` changes in migration history can break Supabase Auth during database restoration
-- This ensures that `prisma migrate deploy` only affects your application schemas
-
-**Note**: It is safe to keep foreign keys that reference `auth.users` (e.g., `profiles_id_fkey`, `bookings_customer_id_fkey`). These do not create `auth` tables — they only reference them.
+**Note**: Foreign keys _referencing_ `auth.users` (e.g., `profiles_id_fkey`, `bookings_customer_id_fkey`) are fine to keep in your own migrations — they don't create or alter anything in `auth`, they only point at it.
 
 ### Migration Best Practices
 
-| Scenario                            | Command                                  | When to Use                               |
-| ----------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| **New schema change**               | `prisma migrate dev --name change`       | Every time you modify `schema.prisma`     |
-| **Baseline from existing database** | `prisma db pull` → `prisma migrate diff` | Initial setup only                        |
-| **Quick development sync**          | `prisma db push`                         | Local development only (never production) |
-| **Manual fix**                      | Raw SQL + `prisma migrate resolve`       | When migrations are blocked               |
-| **Production deployment**           | `prisma migrate deploy`                  | CI/CD pipeline                            |
+| Scenario                            | Command                                          | When to Use                                                                  |
+| ----------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **New schema change**               | `prisma migrate dev --name change`               | Every time you modify `schema.prisma`, against local Supabase                |
+| **Baseline from existing database** | `prisma db pull` → `prisma migrate diff`         | Initial setup only                                                           |
+| **Quick development sync**          | `prisma db push`                                 | Against **local Supabase only** — never the live project                     |
+| **Manual fix**                      | Raw SQL (local first) + `prisma migrate resolve` | When migrations are blocked — see the sequencing warning above               |
+| **Production/live deployment**      | `prisma migrate deploy`                          | Applies already-tested, already-committed migrations. Never resets or drops. |
 
 ### Common Migration Errors & Fixes
 
-| Error                                                 | Cause                                           | Fix                                                        |
-| ----------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
-| `P3006: Migration failed to apply`                    | Baseline migration has unsupported SQL          | Use `prisma migrate diff` + `resolve --applied`            |
-| `P3017: Migration could not be found`                 | Migration directory missing                     | Ensure the migration folder exists in `prisma/migrations/` |
-| `P3018: Failed to apply migration to shadow database` | Shadow database issue                           | Try `prisma migrate reset` (development only)              |
-| `Drift detected`                                      | Database schema doesn't match migration history | Use `prisma db push` (dev) or create a new migration       |
+| Error                                                                          | Cause                                                                                                              | Fix                                                                                                                                           |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `P1000: Authentication failed`                                                 | Wrong username format for Session Pooler (must be `postgres.[project-ref]`, not `postgres`), or `.env` not loading | Check `DATABASE_URL`'s username segment; confirm `prisma.config.ts` loads `.env` via `dotenv` with an explicit `path.resolve(__dirname, ...)` |
+| `P3006: Migration failed to apply`                                             | Baseline migration has unsupported SQL, or references objects the shadow DB doesn't have                           | Use `prisma migrate diff` + `resolve --applied`, or check for stale statements left over from a re-baselined `0_baseline`                     |
+| `P3016: must be owner of table/type "..."`                                     | Migrate's shadow-DB reset tried to touch a Supabase-owned `auth.*` object                                          | Add the object to `tables.external`/`enums.external` in `prisma.config.ts` — see the section above                                            |
+| `P3017: Migration could not be found`                                          | Migration directory missing                                                                                        | Ensure the migration folder exists in `prisma/migrations/`                                                                                    |
+| `P3018: Failed to apply migration to shadow database`                          | Shadow database issue                                                                                              | Try `supabase db reset` (local only) to get a clean shadow DB, then retry                                                                     |
+| `Drift detected` / tables missing despite `migrate status` saying "up to date" | Schema was changed outside Prisma (manual SQL Editor edit, misdirected `--linked` command)                         | See "Incident History" below for the recovery procedure using `migrate diff --from-config-datasource --to-schema`                             |
 
 ---
+
+## 🛠️ Building a Feature: End-to-End Workflow
+
+This ties together NestJS's module/controller/service structure with the migration workflow above into the actual sequence you follow for a real feature — using the **Reviews module** (this project's next planned feature per `STATUS.md`) as a concrete running example: adding a moderation flag so admins can hide inappropriate reviews.
+
+```
+1. Start local Supabase
+        │
+2. Scaffold module/controller/service (Nest CLI)
+        │
+3. Need a schema change? ──No──> skip to step 5
+        │ Yes
+4. Edit schema.prisma → `prisma migrate dev` (local)
+        │
+5. Implement DTO + service logic + controller endpoint
+        │
+6. Test locally (curl / Studio at :54323)
+        │
+7. Commit code + migration file together
+        │
+8. Confident? ──No──> back to step 5/6
+        │ Yes
+9. `prisma migrate deploy` against the LIVE project
+        │
+10. Deploy the application code itself
+```
+
+### 1–2. Start local Supabase, scaffold the module
+
+**What/why**: every feature starts as a NestJS module — Nest's unit of dependency-injection scoping and feature grouping. The controller is the HTTP boundary only (routes, request/response shape); the service holds the actual business logic. Keeping that split matches this project's existing `src/modules/` convention (see "Monorepo Structure" above) and every other module already built (Tours, Bookings, Payments).
+
+```bash
+pnpm --filter natours-backend start   # ensure local Supabase is running
+
+cd apps/api
+nest g module modules/reviews
+nest g controller modules/reviews
+nest g service modules/reviews
+```
+
+This creates `src/modules/reviews/{reviews.module.ts, reviews.controller.ts, reviews.service.ts}` and wires `ReviewsModule` into `AppModule` automatically.
+
+### 3–4. Decide if a migration is needed, then generate it locally
+
+**When**: only if the feature needs a new/changed table, column, enum value, index, or relation. A feature that's pure business logic over existing columns (e.g., computing an average rating from existing `rating` values) skips straight to step 5 — no migration needed.
+
+For the moderation-flag example, `tour.reviews` needs a new column, so update `schema.prisma`:
+
+```prisma
+model Review {
+  id         BigInt    @id @default(autoincrement())
+  reviewText String?   @map("review_text")
+  rating     Int?
+  tourId     BigInt?   @map("tour_id")
+  customerId String?   @map("customer_id") @db.Uuid
+  isFlagged  Boolean   @default(false) @map("is_flagged")   // new
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@schema("tour")
+  @@map("reviews")
+}
+```
+
+Then generate and apply the migration — against **local Supabase**, using `DATABASE_URL`/`DATABASE_SHADOW_URL` from `.env` as-is (see "Local Development Environment" above for why this is safe to do freely here):
+
+```bash
+npx prisma migrate dev --name add_review_moderation_flag
+```
+
+This diffs your change against the shadow database, writes `prisma/migrations/<timestamp>_add_review_moderation_flag/migration.sql`, applies it to local Supabase, and regenerates the Prisma Client — all in one command.
+
+### 5. Implement the feature
+
+```ts
+// src/modules/reviews/dto/create-review.dto.ts
+import { IsInt, IsString, Max, Min, MaxLength } from "class-validator";
+
+export class CreateReviewDto {
+  @IsString()
+  @MaxLength(1000)
+  reviewText: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating: number;
+}
+```
+
+```ts
+// src/modules/reviews/reviews.service.ts
+import { ConflictException, Injectable } from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { CreateReviewDto } from "./dto/create-review.dto";
+
+@Injectable()
+export class ReviewsService {
+  constructor(private prisma: PrismaService) {}
+
+  async create(tourId: bigint, customerId: string, dto: CreateReviewDto) {
+    const existing = await this.prisma.review.findUnique({
+      where: { tourId_customerId: { tourId, customerId } },
+    });
+    if (existing) {
+      throw new ConflictException("You already reviewed this tour");
+    }
+
+    return this.prisma.review.create({ data: { tourId, customerId, ...dto } });
+  }
+}
+```
+
+```ts
+// src/modules/reviews/reviews.controller.ts
+import { Body, Controller, Param, Post } from "@nestjs/common";
+import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { CreateReviewDto } from "./dto/create-review.dto";
+import { ReviewsService } from "./reviews.service";
+
+@Controller("tours/:tourId/reviews")
+export class ReviewsController {
+  constructor(private reviewsService: ReviewsService) {}
+
+  @Post()
+  create(
+    @Param("tourId") tourId: string,
+    @CurrentUser() user: { id: string },
+    @Body() dto: CreateReviewDto,
+  ) {
+    return this.reviewsService.create(BigInt(tourId), user.id, dto);
+  }
+}
+```
+
+### 6. Test locally
+
+```bash
+curl -X POST http://localhost:3000/tours/1/reviews \
+  -H "Authorization: Bearer <local-test-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"reviewText": "Amazing experience!", "rating": 5}'
+```
+
+Inspect the result directly in local Supabase Studio (`http://127.0.0.1:54323`) — this is disposable data, so poke at it freely, and `supabase db reset` whenever you want a clean slate.
+
+### 7. Commit code and migration together
+
+```bash
+git add apps/api/src/modules/reviews apps/api/prisma
+git commit -m "feat(api): add review moderation flag and creation endpoint"
+```
+
+Committing the migration file in the same commit as the code that depends on it keeps the two from drifting apart in history — a later `git log` or an AI agent reading this repo should never have to guess which migration a given feature commit depends on.
+
+### 8–10. Once tested: promote to the live project — yes, this step is required
+
+**This is the step that answers "does what's on local Supabase need to reach the live project?" — yes, always, once you're confident.** A feature isn't done when it works locally; it's done when the same tested migration has been applied to the live database and the application code that depends on it is deployed. Skipping this leaves the live project permanently behind local, which is a milder version of exactly the drift that caused the incident documented below.
+
+```bash
+# Deploy the already-tested migration to the live database.
+# Additive-only — never resets or drops anything already there.
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@[POOLER_HOST]:5432/postgres?sslmode=require" \
+  npx prisma migrate deploy
+
+# Confirm it applied
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@[POOLER_HOST]:5432/postgres?sslmode=require" \
+  npx prisma migrate status
+```
+
+Then deploy the application code itself — see "Deployment" below. The deployed API's runtime `DATABASE_URL` is supplied by the hosting platform (a Render/Railway environment variable), never read from this repo's `.env`, for the same reason the live URL never lives in `.env` locally.
+
+**If working with collaborators later**: each person develops against their own local Supabase instance independently — nothing about steps 1–7 involves the shared live project at all, so there's no coordination needed until step 9. Migration file conflicts in a PR are resolved the same way as any other code conflict; keeping individual migrations small (one logical change each) makes that rare in practice.
+
+---
+
+## 🚨 Incident History
+
+Documented here per this project's own convention of keeping `STATUS.md`/`README.md` as a source of truth for both humans and AI agents picking up context later.
+
+### Sep 2026 — 12 business-domain tables dropped from the live database
+
+**What happened**: `account.profiles`, `tour.bookings`, `tour.partners`, `tour.tours`, and 8 other tables (plus the `tour.media_type` enum) were physically dropped from the live Supabase project, entirely outside of Prisma's migration history. `_prisma_migrations` on the live database still showed every migration as "applied," so nothing about the tracked history flagged a problem on its own — the drift was only discovered when a `prisma migrate diff --from-migrations` run produced a script that tried to drop the _same_ tables again, because the `schema.prisma` being diffed against had itself already been silently re-introspected from the already-drifted live database.
+
+**Root cause**: schema changes made directly against the live project outside Prisma's tracked workflow — most likely a manual edit via the Supabase Table/SQL Editor, or a `supabase db reset --linked`/`supabase db push` run while linked to the live project instead of local. Earlier migrations (`2_add_booking_statuses`, `3_sync_payment_schema`) had already been reconciled _after the fact_ with `migrate resolve --applied`, rather than generated and applied before the underlying change — see the sequencing warning under "Manual fix" above, which exists specifically because of this history.
+
+**Recovery** (no Supabase backup was needed — the project's own committed `schema.prisma` and migration history were sufficient):
+
+```bash
+npx prisma migrate diff \
+  --from-config-datasource \
+  --to-schema prisma/schema.prisma \
+  --script > recover_missing_domain.sql
+
+grep -c "^DROP" recover_missing_domain.sql   # confirm no unexpected drops before applying
+
+psql "<live connection string>" -f recover_missing_domain.sql
+npx prisma db pull      # confirm all models return
+npx prisma generate
+```
+
+Also required: clearing a handful of orphaned rows in `billing.payments`/`billing.platform_transfers` that referenced the now-recreated (empty) `bookings`/`partners` tables, before their foreign keys could be re-added.
+
+**What changed as a result**: local development moved to the Supabase CLI's local stack (`supabase start`) as the mandatory default for all schema work (see the warning banner at the top of this section); `prisma.config.ts`'s `externalTables` config was adopted to properly exclude Supabase-owned `auth.*` objects instead of manually trimming them out of generated SQL by hand.
 
 ## 📚 API Documentation
 
@@ -618,4 +905,4 @@ _Software Engineer · Nix Enthusiast_
 
 ---
 
-**Last Updated**: September 9, 2026
+**Last Updated**: September 11, 2026
