@@ -30,3 +30,6 @@ supabase/.temp/
 # Ignore system-specific files
 .DS_Store  # macOS
 Thumbs.db  # Windows
+
+# Generated Prisma Client output
+apps/api/src/generated/
