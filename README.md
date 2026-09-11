@@ -326,9 +326,13 @@ npx prisma generate
 
 ## 🧩 Local Development Environment
 
+If you're newer to backend work: this section explains two ideas that don't really have an equivalent in frontend development — "local Supabase" and the "shadow database" — because there's no direct frontend parallel to "a whole database server running on your own machine." Both exist purely to let you break things safely, over and over, without any risk to real data.
+
 ### What "local Supabase" actually is
 
 `supabase start` runs Supabase's own Docker images on your machine: Postgres, plus the same Auth (`GoTrue`) and Storage services the hosted project runs, pre-loaded with Supabase's own system schemas (`auth`, `storage`, `realtime`) exactly as a fresh hosted project would have them. It is **not** a copy or sync of the live project — it's always a clean baseline, rebuilt from scratch by `supabase db reset`. Your own tables only exist in it once Prisma's migrations have been replayed into it.
+
+**One precision worth being exact about**: this is _your own developer's world_, isolated from teammates and from production — but by default it's **one instance you reuse across every feature you work on, sequentially**, not a fresh, automatically-isolated copy spun up per feature branch. If you switch from Feature A to Feature B and they have different pending migration files, your one local instance needs to be reset/rebuilt to match whichever branch you currently have checked out — you can't have both branches' local database states available side-by-side for free. (If you ever need that — genuinely working two features in parallel — the pattern is running a separate local database per branch, e.g. distinguished by database name or port, with `DATABASE_URL` swapped per branch; not something this project needs yet, but worth knowing it exists.)
 
 |                                    | Local Supabase                        | Live/hosted Supabase project                                                           |
 | :--------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------------- |
@@ -340,17 +344,26 @@ npx prisma generate
 
 ### What a shadow database is, and why Prisma needs one
 
-**What**: a second, temporary Postgres database that Prisma Migrate creates behind the scenes purely to _compute_ a migration diff — it's never used to store real application data, and your NestJS app never connects to it.
+**What**: a second, temporary Postgres database that Prisma Migrate creates behind the scenes purely to _compute_ a migration diff — it's never used to store real application data, and your NestJS app never connects to it. Think of it like a scratchpad or a draft: when Prisma wants to answer "if I apply these SQL files in order, what will the database end up looking like?", it doesn't guess — it actually builds a real, disposable copy, applies the SQL for real, looks at the result, then throws the copy away. The shadow database is that disposable copy.
 
 **Why it's needed**: to know what your schema will look like _after_ applying a set of migrations, Prisma can't just read the SQL files and reason about them abstractly — SQL's actual effects (a column type change, an enum value addition, a constraint) depend on Postgres actually executing it. So `prisma migrate dev` and `prisma migrate diff --from-migrations` replay your entire migration history against a real, throwaway Postgres database, inspect the resulting structure, and diff _that_ against `schema.prisma` — that replayed copy is the shadow database. Without one, most of Migrate's commands can't run at all (this is exactly the class of `P3018`/`P1000` errors in the table below).
 
 **Why it has to be local, not a second hosted Supabase project**: creating/dropping a database is exactly the kind of privileged operation Supabase's pooler intentionally restricts on hosted projects (see the table above) — and even where it's technically possible, using a second billable cloud project as scratch space that gets wiped on every migration is wasteful and slow. A local Postgres instance you fully control is disposable by design, which is the actual property you want from something that exists purely to be repeatedly blown away and rebuilt.
+
+**How does this apply to this project?**: everything above is the general concept — here's exactly what it looks like in Natours specifically. There's no separate, special piece of shadow-database infrastructure here at all. It's the _same_ local Postgres that `supabase start` already gives you, running in Docker on your machine at `127.0.0.1:54322` — the exact instance you also use for regular development. Concretely:
+
+- `apps/api/.env` points **both** `DATABASE_URL` and `DATABASE_SHADOW_URL` at that same address: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+- `apps/api/prisma.config.ts` reads `DATABASE_SHADOW_URL` into its `shadowDatabaseUrl` field — that's the setting Prisma actually consults whenever a command needs a shadow database.
+- When you run `npx prisma migrate dev` (or `migrate diff --from-migrations`), here's the literal sequence that happens on your machine: Prisma connects to that local Postgres server, creates a **brand-new, separate, temporary database** on it (something like `prisma_migrate_shadow_db_<random>` — not your real `postgres` database), replays every file in `prisma/migrations/` into that temporary database, compares the result against `schema.prisma`, and then deletes the temporary database entirely. Your actual `reviews`, `bookings`, etc. tables — the ones living in the real `postgres` database that `DATABASE_URL` points to — are never touched during this comparison step, only afterward, once the real migration is actually applied for real.
+- This is also the concrete, literal reason `--from-migrations` commands kept failing with `P3016` ownership errors earlier in this project's history when pointed at the _live_ Supabase project (see "Incident History" below): doing this same "create a temporary database, use it, delete it" dance against a hosted Supabase project is exactly the privileged operation their pooler blocks. Switching the shadow database to local Supabase wasn't a workaround — it's what made this operation possible to run at all.
 
 In this project, `DATABASE_SHADOW_URL` and `DATABASE_URL` happen to point at the _same_ local instance day-to-day — that's fine; the distinction that matters is conceptual (one is "where my app's data lives," the other is "Migrate's scratch space for computing diffs"), not that they need separate servers locally. What must never happen is either of them pointing at the live project during routine development.
 
 ---
 
 ## 🗄️ Database Migration
+
+A "migration" is just a saved, ordered SQL file describing one change to the database — like "create this table," or "add this column." Instead of changing the database by hand and hoping everyone remembers what changed, every change gets written down as a migration file, committed to git, and applied the same way everywhere (your machine, a teammate's machine, the live project). This section covers the commands for that — the mental model behind _why_ it's structured this way is in "Local Development Environment" above and "Incident History" below, both worth reading first if anything here feels like an arbitrary rule rather than a reason.
 
 > **🚨 All schema changes go through this workflow, with no exceptions — including "quick" fixes.** Every incident in this project's history so far (see "Incident History" at the end of this section) traces back to a schema change made directly against the live/hosted Supabase project — via the SQL Editor, Table Editor, or a misdirected CLI command — instead of through a tracked Prisma migration applied first to local Supabase. The live project is a **deploy target only**. Never open its SQL Editor or Table Editor to change schema, and never run `supabase db reset --linked` or `supabase db push` against it from a routine dev workflow.
 
@@ -552,6 +565,8 @@ WHERE n.nspname = 'auth' AND t.typtype = 'e';
 This ties together NestJS's module/controller/service structure with the migration workflow above into the actual sequence you follow for a real feature — using the **Reviews module** (this project's next planned feature per `STATUS.md`) as a concrete running example: adding a moderation flag so admins can hide inappropriate reviews.
 
 ```
+0. Sync local with git + check for drift
+        │
 1. Start local Supabase
         │
 2. Scaffold module/controller/service (Nest CLI)
@@ -572,6 +587,58 @@ This ties together NestJS's module/controller/service structure with the migrati
         │
 10. Deploy the application code itself
 ```
+
+### 0. Sync your local environment before you start
+
+If you're coming from frontend or general software engineering, you already know this pattern well: before starting new work, you do `git checkout main`, `git pull`, and _then_ branch off — you never want to build a feature on top of a stale copy of the codebase. The same instinct applies here, **but there's one important twist that's specific to databases, and it's worth slowing down to actually understand rather than just memorizing the commands.**
+
+**The twist: you don't "pull" the database's current shape. You pull the _instructions_ for building it, and then run those instructions yourself, locally.**
+
+Here's an analogy that makes this click: think of `prisma/migrations/` as a **recipe**, and the actual live database as a **finished dish** that was cooked using that recipe. If you want to cook the same dish at home, the right move is to follow the written recipe yourself, in your own kitchen. The _wrong_ move is to go taste someone else's finished plate and try to reverse-engineer what's in it — because what if, at some point, someone changed something on that plate (added a pinch of salt, swapped an ingredient) without ever writing it down in the recipe? You'd copy a dish that doesn't actually match what the recipe says, and the recipe — the thing everyone else relies on, the thing your own future dishes will be based on — would quietly become wrong.
+
+That's not a hypothetical here — it's _exactly_ what happened earlier in this project (see "Incident History" below): at some point, someone changed the live database directly, without writing a migration file for it. The "recipe" (migration history) and the "finished dish" (the live database) fell out of sync, and nobody noticed until a routine command tried to follow the recipe and discovered it no longer matched reality.
+
+**So, concretely, what "syncing before you start" means here is two separate checks, answering two different questions:**
+
+**Question 1: "Did a teammate (or CI, or past-you) add new migration files I don't have yet?"** This is the direct equivalent of `git pull` — you're just making sure you have the latest recipe.
+
+```bash
+# Get any new migration files that were added to the repo since you last checked
+git pull origin main
+
+# Dependencies might have changed too (a new Prisma version, a new package) —
+# reinstall to be safe
+pnpm install
+
+# Now ask Prisma directly: "given the migration files I have locally, is my
+# LOCAL database up to date, or is something pending?"
+cd apps/api
+npx prisma migrate status
+```
+
+If `migrate status` reports pending migrations (ones that exist as files but haven't been run against your local database yet), apply them — this is "cooking the recipe yourself":
+
+```bash
+# Applies any pending migrations to local Supabase, in order
+npx prisma migrate deploy
+
+# Or, if you'd rather start from a completely clean slate (wipes local
+# data, replays every migration from scratch — totally safe, since local
+# data is always disposable):
+pnpm --filter natours-backend db:reset
+```
+
+**Question 2: "Has the LIVE database quietly drifted from what the recipe says it should be?"** This is a different question from Question 1, and it's the one that would have caught the original incident early. It's not about getting new instructions — it's about double-checking that nobody went and changed the finished dish directly, off-recipe. You don't need to run this before every single feature, but it's a good habit before starting significant work, and it's essential right before you deploy anything to production (step 9 below already includes this check for that reason):
+
+```bash
+# Point Prisma at the LIVE database and ask the same "are we up to date?"
+# question — if the answer isn't a clean "yes," something changed outside
+# the tracked migration history, and it's worth investigating before
+# building anything else on top of it.
+DATABASE_URL="<live pooler URL>" npx prisma migrate status
+```
+
+**Why this matters enough to be step 0, not an afterthought**: every problem this project's `README.md` documents fixing so far — the dropped tables, the enums created twice, the migration history that no longer matched reality — traces back to skipping exactly this kind of check, or to treating the live database's current state as more trustworthy than the written migration history. Getting into the habit of running these two commands before you start, the same automatic way you'd run `git pull`, is the single cheapest thing you can do to avoid repeating that.
 
 ### 1–2. Start local Supabase, scaffold the module
 
