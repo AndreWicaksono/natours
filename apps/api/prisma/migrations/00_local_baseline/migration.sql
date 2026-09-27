@@ -1,0 +1,4 @@
+-- Empty baseline. Acknowledges that Supabase's own system schemas
+-- (auth, storage, realtime, extensions, etc.) already exist in a fresh
+-- local instance via `supabase start`/`supabase db reset` — this isn't
+-- Prisma-managed state, so there's nothing to actually apply here.

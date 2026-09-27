@@ -4,11 +4,13 @@ import { defineConfig, env } from 'prisma/config';
 
 config({ path: path.resolve(__dirname, '.env') });
 
+const shadowDatabaseUrl = process.env.DATABASE_SHADOW_URL;
+
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   datasource: {
     url: env('DATABASE_URL'),
-    shadowDatabaseUrl: env('DATABASE_SHADOW_URL'),
+    ...(shadowDatabaseUrl ? { shadowDatabaseUrl } : {}),
   },
   experimental: {
     externalTables: true,
