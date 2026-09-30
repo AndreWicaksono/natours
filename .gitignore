@@ -33,3 +33,6 @@ Thumbs.db  # Windows
 
 # Generated Prisma Client output
 apps/api/src/generated/
+
+# Core dump files (if any)
+core.*

@@ -1,3 +1,50 @@
+-- Guarded shims for Supabase-managed objects. Real local/live databases
+-- already have auth.uid(), PostGIS, and auth.users — owned by
+-- supabase_auth_admin or created by Supabase's own bootstrap process,
+-- not by the `postgres` role this migration runs as. Prisma's shadow
+-- database has none of them.
+--
+-- Every check below happens in pg_catalog FIRST, inside the IF
+-- condition — the CREATE statement only runs when the object is
+-- genuinely absent. This matters beyond avoiding an "already exists"
+-- error: Postgres checks CREATE privilege on the target schema BEFORE
+-- evaluating a bare `CREATE ... IF NOT EXISTS` clause, so on a database
+-- where `postgres` doesn't own these objects, that alone still fails
+-- with "permission denied" even though the object already exists.
+-- Skipping the statement entirely via PL/pgSQL control flow — never
+-- letting Postgres's executor see it at all — is what actually avoids
+-- the privilege check.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'auth') THEN
+    CREATE SCHEMA auth;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'auth' AND p.proname = 'uid'
+  ) THEN
+    CREATE FUNCTION auth.uid() RETURNS uuid
+      LANGUAGE sql STABLE
+      AS $func$ SELECT NULL::uuid $func$;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+    CREATE EXTENSION postgis;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'auth' AND c.relname = 'users'
+  ) THEN
+    CREATE TABLE auth.users (
+      id uuid PRIMARY KEY
+    );
+  END IF;
+END $$;
+
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "account";
 

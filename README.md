@@ -245,6 +245,9 @@ The `billing.platform_transfers` table tracks every financial transaction:
 
 - **NixOS** (recommended) – the project uses a Nix shell for reproducible tooling
 - Or any Linux/macOS with `pnpm`, `Node.js 24+`, `Docker` (for Supabase local)
+- **`psql`** – the PostgreSQL command-line client. Nearly every command throughout "Database Migration" and "Local Development Environment" below assumes it's on your `PATH`. It's just the client binary, not a database server — local Postgres itself is provided entirely by `supabase start`/Docker, so installing `psql` doesn't mean running a second Postgres instance. Install it however fits your system: a package manager (`apt install postgresql-client`, `brew install libpq`, a Nix package, etc.), or a one-off Docker container if you'd rather not install anything locally.
+
+  **Version matching isn't required, but staying reasonably current is worth it.** PostgreSQL maintains strong backward/forward compatibility in its client-server protocol — a `psql` client can connect to a server several major versions older or newer without issues for ordinary queries. Supabase currently runs Postgres 17, so there's no strict requirement to match that exactly; a noticeably older client (e.g., a `psql` from Postgres 12 or earlier) can occasionally lack newer meta-commands or display certain newer server-side features slightly differently, but basic connecting and querying will work regardless. If you have a choice, picking a `psql` version at or near 17.x avoids that class of minor friction entirely.
 
 ### Quick Start
 
@@ -328,6 +331,8 @@ npx prisma migrate deploy
 npx prisma generate
 ```
 
+**Note**: the generated client (`apps/api/src/generated/prisma/`) is gitignored, not committed — it's fully reproducible from `schema.prisma` via the command above, and tracking it only produces noisy diffs on every `generate` run (including for Supabase's own `auth.*` models, which regenerate as part of the same bundled output even when untouched). A `postinstall: prisma generate` script in `apps/api/package.json` means a fresh `pnpm install` always produces a correct client automatically — you shouldn't normally need to run this command manually except right after pulling schema changes mid-session.
+
 `prisma db push` still has a place for quick throwaway prototyping (see the Troubleshooting section below), but the default path for anything you intend to keep is `migrate dev`/`migrate deploy` against local Supabase.
 
 ---
@@ -391,9 +396,11 @@ npx prisma migrate resolve --applied 00_local_baseline
 npx prisma migrate deploy
 ```
 
-The first command gives Prisma a migration history to point to (satisfying the "not empty, but no history" check) without lying about anything — the migration itself is genuinely empty, so marking it "applied" and "having actually applied it" are the same statement. The second command then applies your real 4 migrations for real, creating `account`/`billing`/`geography`/`tour`'s tables in local Postgres for the first time.
+The first command gives Prisma a migration history to point to (satisfying the "not empty, but no history" check) without lying about anything — the migration itself is genuinely empty, so marking it "applied" and "having actually applied it" are the same statement. The second command then applies the rest of your tracked migration history for real, creating `account`/`billing`/`geography`/`tour`'s tables in local Postgres.
 
 **This is a standing requirement of working with this project locally, not a one-off fix for a specific incident** — because `supabase db reset` wipes `_prisma_migrations` along with everything else every time, this exact P3005 will resurface after every future reset. The migration file itself only needs to exist once (it's already committed); the two-command sequence above is what you repeat each time you reset.
+
+**One distinction worth being precise about, since the word "reset" refers to two different tools here**: `npx prisma migrate reset` (Prisma's own command, used when a migration file's checksum no longer matches what was recorded — see "Troubleshooting" below) does **not** require this two-command sequence afterward. It only touches Prisma-managed schema objects and replays your migration history through normal application, so `00_local_baseline` applies in sequence like any other migration — no separate `resolve --applied` needed. It's specifically `supabase db reset` (which tears down and rebuilds the entire local Postgres/Auth/Storage stack from scratch) that requires the extra step, because that's the one that wipes `_prisma_migrations` down to nothing.
 
 ### What a shadow database is, and why Prisma needs one
 
@@ -614,6 +621,83 @@ WHERE n.nspname = 'auth' AND t.typtype = 'e';
 
 **Note**: Foreign keys _referencing_ `auth.users` (e.g., `profiles_id_fkey`, `bookings_customer_id_fkey`) are fine to keep in your own migrations — they don't create or alter anything in `auth`, they only point at it.
 
+### When a migration *directly uses* a Supabase-owned object, not just references it
+
+`externalTables`/`enums.external` above solves one specific problem: keeping Migrate from trying to *manage* Supabase's own objects. It does **not** solve a different, related problem — a migration that *actively uses* a Supabase-owned function, extension, or table as part of creating your own schema. `0_baseline` does this in three places: `tours.created_by UUID DEFAULT auth.uid()` (a Supabase Auth function), `locations.geog geography` (a PostGIS type), and a foreign key into `auth.users(id)` (a Supabase Auth table).
+
+**Why this only breaks in the shadow database, never on local or live directly**: Postgres schemas, extensions, and functions are scoped **per-database**, not per-server. Your real local `postgres` database and the live project both have `auth.uid()`, PostGIS, and `auth.users` — Supabase's own bootstrap process put them there. But `prisma migrate dev`/`migrate diff --from-migrations` compute their diff by replaying your full migration history into a **brand-new, separate database** on the same Postgres server (see "What a shadow database is" above) — and a fresh sibling database shares none of that with the database it was created next to. So `0_baseline` fails with errors like `schema "auth" does not exist`, `type "geography" does not exist`, or `relation "auth.users" does not exist` — not because anything is actually wrong with your real databases, but because the shadow database has never seen Supabase's bootstrap at all.
+
+**The fix: a guarded stub, added directly at the top of the migration that needs it** — not a separate earlier-sorting migration file (Prisma's folder-name sorting is natural-sort for the hand-named migrations in this project's early history, timestamp-prefixed for everything `migrate dev` generates from here on — mixing the two makes "which one runs first" genuinely hard to predict without checking, so don't rely on file ordering to solve this). `0_baseline/migration.sql` now opens with:
+
+```sql
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'auth') THEN
+    CREATE SCHEMA auth;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'auth' AND p.proname = 'uid'
+  ) THEN
+    CREATE FUNCTION auth.uid() RETURNS uuid
+      LANGUAGE sql STABLE
+      AS $func$ SELECT NULL::uuid $func$;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+    CREATE EXTENSION postgis;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'auth' AND c.relname = 'users'
+  ) THEN
+    CREATE TABLE auth.users (
+      id uuid PRIMARY KEY
+    );
+  END IF;
+END $$;
+```
+
+**The one rule that makes this safe, and it's not optional**: every check happens in `pg_catalog` *inside the `IF` condition*, and the `CREATE` statement only runs when the object is genuinely absent. This matters for a reason that's easy to miss — Postgres checks whether you have `CREATE` privilege on a schema **before** it even evaluates whether the object already exists. A bare `CREATE TABLE IF NOT EXISTS auth.users (...)` still fails with `permission denied for schema auth` on your real databases, even though the table is already there — because `postgres` doesn't own `auth` there (same restriction as the `P3016` errors earlier), and Postgres checks the privilege first regardless of `IF NOT EXISTS`. Wrapping the check in PL/pgSQL means the `CREATE` statement is never even sent to Postgres's executor when the condition is false — no privilege check ever happens, because nothing was asked of Postgres at all. This is the actual mechanism that makes the stub a true no-op on local/live: not "it's harmless if it runs," but "it never runs there in the first place."
+
+**If a future feature introduces a new dependency on a Supabase-owned object**, extend this same block rather than writing a new one from scratch — add another `IF NOT EXISTS (...) THEN CREATE ... END IF;` following the exact same shape. A quick way to spot whether a new migration needs this at all:
+
+```bash
+grep -E "auth\.[a-z_]+\(\)|geography|geometry|REFERENCES \"auth\"" prisma/migrations/<new_migration>/migration.sql
+```
+
+If nothing matches, no shim needed for that migration.
+
+### A related lesson: dropping a column silently drops its indexes too
+
+This is a standard, documented PostgreSQL behavior — not a Prisma quirk — but it's easy to miss when reviewing a migration for "does the end state look right," which is exactly what happened in `1_add_transfer_status`. It originally did:
+
+```sql
+ALTER TABLE "billing"."platform_transfers" ALTER COLUMN "id" DROP DEFAULT,
+DROP COLUMN "status",
+ADD COLUMN     "status" "billing"."TransferStatus" NOT NULL DEFAULT 'PENDING',
+...
+```
+
+Checking only "does the `status` column end up with the right type and default" said yes — and it does. What that check misses: **Postgres automatically drops any index defined on a column the instant that column is dropped**, and nothing about `ADD COLUMN` afterward recreates it. `0_baseline` creates `platform_transfers_status_idx` on this exact column; this migration silently destroyed it as a side effect, invisible until a much later `migrate dev` run recreated the index automatically to reconcile the gap — genuinely correct behavior on Prisma's part, but confusing to encounter without knowing why.
+
+**The fix, and the general pattern worth remembering**: prefer `ALTER COLUMN ... TYPE ... USING ...` over `DROP COLUMN` + `ADD COLUMN` whenever a column's type needs to change but the column itself should persist:
+
+```sql
+ALTER TABLE "billing"."platform_transfers" ALTER COLUMN "id" DROP DEFAULT,
+ALTER COLUMN "status" TYPE "billing"."TransferStatus" USING "status"::text::"billing"."TransferStatus",
+ALTER COLUMN "status" SET DEFAULT 'PENDING',
+ALTER COLUMN "created_at" SET NOT NULL,
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3),
+ALTER COLUMN "succeeded_at" SET DATA TYPE TIMESTAMP(3);
+```
+
+Same resulting column shape, but the column (and anything depending on it — indexes, but also views or foreign keys referencing it) is never actually destroyed in the process. Worth checking for this pattern any time you review a generated migration that drops and re-adds a column of the same name.
+
 ### Migration Best Practices
 
 | Scenario                            | Command                                          | When to Use                                                                  |
@@ -632,6 +716,8 @@ WHERE n.nspname = 'auth' AND t.typtype = 'e';
 | `P3005: The database schema is not empty`                                       | Fresh local database — Supabase's own system schemas already exist but Prisma has no migration history yet                | Run `npx prisma migrate resolve --applied 00_local_baseline` first — see "Local Development Environment" above                                |
 | `P3006: Migration failed to apply`                                             | Baseline migration has unsupported SQL, or references objects the shadow DB doesn't have                           | Use `prisma migrate diff` + `resolve --applied`, or check for stale statements left over from a re-baselined `0_baseline`                     |
 | `P3016: must be owner of table/type "..."`                                     | Migrate's shadow-DB reset tried to touch a Supabase-owned `auth.*` object                                          | Add the object to `tables.external`/`enums.external` in `prisma.config.ts` — see the section above                                            |
+| `schema "auth" does not exist` / `type "geography" does not exist` / `relation "auth.users" does not exist` (during shadow-DB replay) | A migration directly *uses* a Supabase-owned function/extension/table, which the fresh shadow database never has | Add a guarded stub to the top of the relevant migration — see "When a migration directly uses a Supabase-owned object" above |
+| `permission denied for schema auth` (after adding a stub like the above) | Used a bare `CREATE ... IF NOT EXISTS` instead of a `pg_catalog` check inside `IF` — Postgres checks privilege before existence | Wrap the `CREATE` in `IF NOT EXISTS (SELECT ... FROM pg_catalog...) THEN ... END IF` so it's never sent to Postgres at all on databases where you lack privilege — see the same section above |
 | `P3017: Migration could not be found`                                          | Migration directory missing                                                                                        | Ensure the migration folder exists in `prisma/migrations/`                                                                                    |
 | `P3018: Failed to apply migration to shadow database`                          | Shadow database issue                                                                                              | Try `supabase db reset` (local only) to get a clean shadow DB, then retry — remember this also requires re-running `migrate resolve --applied 00_local_baseline` before your next `migrate deploy`/`migrate dev` |
 | `The shadow database you configured appears to be the same as the main database` | `DATABASE_SHADOW_URL` is explicitly set to the same value as `DATABASE_URL`                                      | Don't set `DATABASE_SHADOW_URL` at all for local development — remove it from `.env` and let Prisma auto-create its own temporary shadow database (see "Local Development Environment" above) |
@@ -986,6 +1072,8 @@ This project is managed as a monorepo. Please follow the existing code style and
 
 ### Development Workflow
 
+This covers the git mechanics only — for the actual database-aware steps (syncing local first, deciding whether a migration is needed, testing locally before deploying), see "Building a Feature: End-to-End Workflow" above.
+
 1. Create a feature branch: `git checkout -b feat/feature-name`
 2. Make your changes and commit: `git commit -m "feat: add feature"`
 3. Push to GitHub: `git push origin feat/feature-name`
@@ -1012,10 +1100,15 @@ This project is managed as a monorepo. Please follow the existing code style and
 
 ### Common Issues
 
+**Issue**: Database schema out of sync, migration won't apply, or a Prisma error code (`P1000`, `P3005`, `P3006`, `P3016`, `P3018`, etc.)
+
+See "Database Migration" → "Common Migration Errors & Fixes" above — that table covers every migration-related error this project has actually hit, with the specific fix for each, rather than generic advice here.
+
 **Issue**: Prisma client not generated
 
 ```bash
-pnpm turbo run prisma:generate
+cd apps/api
+npx prisma generate
 ```
 
 **Issue**: Stripe webhooks not received
@@ -1052,4 +1145,4 @@ _Software Engineer · Nix Enthusiast_
 
 ---
 
-**Last Updated**: September 27, 2026
+**Last Updated**: September 30, 2026
