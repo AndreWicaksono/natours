@@ -149,7 +149,7 @@ natours/
 | **ORM**           | Prisma 7            | Type-safe database access with native PostgreSQL connections |
 | **Database**      | Supabase PostgreSQL | Cloud-hosted PostgreSQL with Auth & Storage                  |
 | **Payments**      | Stripe Connect      | Marketplace payment splitting & payouts                      |
-| **Auth**          | Supabase Auth (JWT) | User authentication with JWKS (ES256)                        |
+| **Auth**          | Supabase Auth (JWT) | User authentication — ES256 via JWKS (live) or HS256 (local); see "Authentication & Authorization" below |
 | **Frontend**      | Next.js / React     | Customer-facing web experience                               |
 | **Admin UI**      | React Admin         | Dashboard for partners & admins                              |
 | **Monorepo**      | Turborepo + pnpm    | Fast builds, shared dependencies                             |
@@ -165,6 +165,121 @@ natours/
 | **RLS Bypass**                               | NestJS uses `service_role` key, bypassing RLS — all authorization logic is in the application layer.                                                                                    |
 | **On-demand Tour Schedules**                 | `tour_schedules` are created only when the first booking is made, avoiding database bloat.                                                                                              |
 | **Check-in for attendance tracking**         | `CONFIRMED` → `ONGOING` requires manual check-in; auto `NO_SHOW` if no check-in after start date. Provides accurate attendance data and enables post-tour actions (reviews, analytics). |
+
+---
+
+## 🔑 Authentication & Authorization
+
+### What this system does, in one sentence
+
+This API never handles passwords or issues its own tokens. **Supabase Auth (GoTrue) is the identity provider** — it owns signup, login, and token issuance. **This NestJS API is purely a resource server** — its only job is to verify a JWT Supabase already issued, then enrich it with this project's own role/profile data before any business logic runs.
+
+### Who owns what
+
+|                                          | Owns                                                              |
+| :--------------------------------------- | :----------------------------------------------------------------- |
+| **Supabase Auth (GoTrue)**              | Passwords, sessions, token issuance/signing, `auth.users`          |
+| **This NestJS API**                     | Verifying tokens, enforcing which role may call which endpoint     |
+| **`account.profiles`** (this project's own table, FK'd to `auth.users`) | The bridge between "which Supabase Auth user is this" and "what does *our app* let them do" — `role`, `partnerId`, name, avatar |
+
+A token proves *who you are* (Supabase's job). It says nothing on its own about *what you're allowed to do here* — that's `account.profiles.role`, looked up fresh on every request.
+
+### Where each piece lives, and what it's responsible for
+
+All ten files live in `apps/api/src/auth/`:
+
+| File | Responsibility |
+| :--- | :--- |
+| `jwt.strategy.ts` | The actual verification engine. Extracts the bearer token, picks the right signing method (see below), verifies the signature, then runs `validate()` — which looks up `account.profiles` by the token's `sub` claim and returns the enriched user object |
+| `jwt-payload.interface.ts` | Shape of the **raw** decoded JWT — Supabase's own claims (`sub`, `email`, `aud`, `role`, etc.), before any enrichment |
+| `user-payload.interface.ts` | Shape of the **enriched** object `validate()` produces — what every controller actually receives via `@CurrentUser()`. Notice this has an app-level `role: AppRole` field that the raw JWT never has — that's this project's data, not Supabase's |
+| `jwt-auth.guard.ts` | Wraps the strategy as a NestJS Guard — this is what actually runs Passport's verification on each request, and checks for the `@Public()` escape hatch first |
+| `public.decorator.ts` | Marks a route as skipping authentication entirely |
+| `roles.decorator.ts` + `roles.guard.ts` | **Authorization**, not authentication — runs *after* `JwtAuthGuard` has already confirmed who the caller is; checks that role against an allow-list |
+| `current-user.decorator.ts` | Convenience — pulls the already-validated user object (`request.user`) into a controller method as a typed parameter |
+| `auth.module.ts` | Wires the strategy, guards, and `PrismaService` dependency together as a NestJS module |
+| `auth.service.ts` | Currently an empty placeholder — no business logic lives here yet; reserved for future auth-related operations beyond what Guards/Strategy handle |
+
+### When: the request lifecycle, step by step
+
+```
+Request arrives
+      │
+      ▼
+JwtAuthGuard.canActivate()
+      │  Is the route marked @Public()?
+      ├─ Yes ──────────────────────────────► skip straight to controller
+      │  No
+      ▼
+Passport runs JWTStrategy:
+  extract bearer token → pick HS256 or ES256 → verify signature
+  → validate() looks up account.profiles → attaches enriched user to request
+      │
+      │  Token invalid/expired/missing? ──► 401 Unauthorized, stops here
+      ▼
+RolesGuard.canActivate()
+  reads @Roles(...) metadata → compares against request.user.role
+      │
+      │  Role not in the allow-list? ──► 403 Forbidden, stops here
+      ▼
+Controller method runs
+  @CurrentUser() pulls request.user as a typed parameter
+```
+
+**Worth knowing for debugging**: a `401` means `JwtAuthGuard` rejected the request — the token itself is missing, malformed, expired, or fails signature verification. A `403` means the token was perfectly valid, but `RolesGuard` rejected the *role*. These are genuinely different failures with different fixes — confusing them wastes debugging time (this is exactly what happened in the incident that prompted this section: a `401` with zero controller-side output meant the problem was in token *verification*, not in which role was logged in, and the role never got a chance to matter).
+
+### Why authentication code only ever appears at the controller level — your observation is correct, and here's the mechanism
+
+This isn't a project convention someone chose — it's how NestJS's Guards feature actually works. Guards (`@UseGuards(...)`) and the metadata they read (`@Roles(...)`, `@Public()`) can only be attached at the controller or method level (or globally, for the whole app) — there's no equivalent concept inside a service class. By the time a service method runs, authentication and authorization have *already happened*; the service receives a plain, already-validated `UserPayload` object as an ordinary parameter, with zero awareness of JWTs, Supabase, or how that user got there at all.
+
+This is the same Single Responsibility split documented in `nestjs-js-ts-foundations.md` (Part 3.3) — controllers own "is this request allowed," services own "what does this request actually do" — applied specifically to auth. One concrete benefit worth naming: it makes services trivially testable without any auth machinery at all. Testing `ReviewsService.create()` never requires mocking a JWT or a Guard — just construct a plain `UserPayload` object directly and pass it in (see `nestjs-js-ts-foundations.md` Part 3.8 for the general pattern).
+
+### How: the two signing algorithms, and why the strategy supports both
+
+Local Supabase (CLI v2.33.5, this project's pinned version) issues **HS256**-signed tokens — a legacy symmetric algorithm, verified with a single shared secret. The live project issues **ES256** — asymmetric, verified against a public key fetched from Supabase's JWKS endpoint. These aren't interchangeable, and a strategy hardcoded to one will flatly reject tokens from an environment using the other.
+
+`JWTStrategy`'s `secretOrKeyProvider` decodes each token's own header first (without trusting it yet) and routes to the matching key source — `HS256` → `SUPABASE_JWT_SECRET` (a plain shared secret), `ES256`/`RS256` → the JWKS public key. Each algorithm only ever matches its own key material, so this isn't the classic "algorithm confusion" vulnerability (where a server mistakenly accepts either algorithm against the *same* key) — it's two fully separate verification paths that happen to live in one strategy class.
+
+**For local development**, make sure `SUPABASE_JWT_SECRET` in `apps/api/.env` matches what local Supabase actually uses:
+```bash
+supabase status -o env | grep JWT
+```
+
+### How: testing an authenticated endpoint locally
+
+```bash
+# 1. Sign in as a test user against LOCAL Supabase's Auth endpoint directly
+#    (anon key, not service_role — see "Who owns what" above)
+curl -X POST 'http://127.0.0.1:54321/auth/v1/token?grant_type=password' \
+  -H "apikey: <local anon key, from `supabase status`>" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "partner@natours.com", "password": "..."}'
+
+# 2. Export the access_token from that response
+export TOKEN="<access_token from the response above>"
+
+# 3. Call your API with it
+curl -X POST http://localhost:3000/tours \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ ... }'
+```
+
+**To inspect a token directly when something's not working** — this decodes the header and payload without verifying the signature, which is exactly what you want for debugging (not for trusting the contents):
+```bash
+echo "$TOKEN" | cut -d. -f1 | tr '_-' '/+' | base64 -d 2>/dev/null; echo   # header: check "alg"
+echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null; echo   # payload: check "iss"
+```
+`iss` tells you definitively which Supabase instance issued the token (`http://127.0.0.1:54321/...` = local, `https://[project-ref].supabase.co/...` = live) — useful any time a token behaves unexpectedly and you're not sure which environment it actually came from.
+
+### Common Auth Errors & Fixes
+
+| Symptom | Likely cause | Fix |
+| :--- | :--- | :--- |
+| `401 Unauthorized`, no controller-side `console.log` output | `JwtAuthGuard` rejected before the request reached the controller — token missing, expired, or signature verification failed | Decode the token (above) and check `alg`/`iss`; confirm `SUPABASE_JWT_SECRET` (HS256) or `SUPABASE_URL`'s JWKS endpoint (ES256) matches the environment that issued it |
+| `403 Forbidden` | Token is valid, but `request.user.role` isn't in the route's `@Roles(...)` list | Confirm which role the logged-in user actually has in `account.profiles`, and that it matches what the route expects |
+| `401` only on locally-issued tokens, live tokens work fine | Local Supabase issuing HS256, strategy only configured for ES256 (or vice versa) | See "the two signing algorithms" above — confirm `JWTStrategy` branches on the token's own `alg` rather than assuming one |
+| `UnauthorizedException('User profile not found')` | Token is valid and correctly verified, but no matching row in `account.profiles` for that user's `auth.users` id | Usually means a user was created directly in Supabase Auth without the corresponding profile row being created — check whatever signup flow is responsible for creating `account.profiles` rows |
 
 ---
 
@@ -1145,4 +1260,4 @@ _Software Engineer · Nix Enthusiast_
 
 ---
 
-**Last Updated**: September 30, 2026
+**Last Updated**: October 2, 2026
