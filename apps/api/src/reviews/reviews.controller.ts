@@ -1,4 +1,11 @@
-import { BadRequestException, Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 
 import { CurrentUser } from 'src/auth/current-user.decorator';
 import { Roles } from 'src/auth/roles.decorator';
@@ -11,24 +18,23 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { ReviewsService } from './reviews.service';
 
 @Controller('bookings/:bookingId/reviews')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class ReviewsController {
-    constructor(private reviewsService: ReviewsService) { }
+  constructor(private reviewsService: ReviewsService) {}
 
-    @Post()
-    @Roles(AppRole.CUSTOMER)
-    create(
-        @Param('bookingId') bookingId: string,
-        @CurrentUser() user: UserPayload,
-        @Body() dto: CreateReviewDTO,
-    ) {
-        let parsedBookingId: bigint;
-        try {
-            parsedBookingId = BigInt(bookingId);
-        } catch {
-            throw new BadRequestException('Invalid booking ID');
-        }
-        return this.reviewsService.create(parsedBookingId, user, dto);
+  @Post()
+  @Roles(AppRole.CUSTOMER)
+  create(
+    @Param('bookingId') bookingId: string,
+    @CurrentUser() user: UserPayload,
+    @Body() dto: CreateReviewDTO,
+  ) {
+    let parsedBookingId: bigint;
+    try {
+      parsedBookingId = BigInt(bookingId);
+    } catch {
+      throw new BadRequestException('Invalid booking ID');
     }
-
+    return this.reviewsService.create(parsedBookingId, user, dto);
+  }
 }

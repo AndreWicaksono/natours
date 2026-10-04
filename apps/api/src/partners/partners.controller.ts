@@ -19,7 +19,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { UserPayload } from '../auth/user-payload.interface';
 
 @Controller('partners')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class PartnersController {
   constructor(
     private readonly connectService: PartnersConnectService,
@@ -89,7 +89,9 @@ export class PartnersController {
       };
     }
 
-    const status = await this.connectService.getAccountStatus(partner.stripeAccountId);
+    const status = await this.connectService.getAccountStatus(
+      partner.stripeAccountId,
+    );
 
     return {
       stripeAccountId: partner.stripeAccountId,

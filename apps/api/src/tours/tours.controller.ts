@@ -24,7 +24,7 @@ import type { UserPayload } from '../auth/user-payload.interface';
 import { AvailabilityService } from './availability.service';
 
 @Controller('tours')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class ToursController {
   constructor(
     private readonly toursService: ToursService,

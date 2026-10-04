@@ -21,7 +21,7 @@ import { Public } from 'src/auth/public.decorator';
 import { ExpirationService } from './expiration.service';
 
 @Controller('bookings')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class BookingsController {
   constructor(
     private readonly bookingsService: BookingsService,
