@@ -200,6 +200,60 @@ All ten files live in `apps/api/src/auth/`:
 | `auth.module.ts` | Wires the strategy, guards, and `PrismaService` dependency together as a NestJS module |
 | `auth.service.ts` | Currently an empty placeholder — no business logic lives here yet; reserved for future auth-related operations beyond what Guards/Strategy handle |
 
+**How these 10 files relate to each other and to the app's bootstrap/root files:**
+
+```mermaid
+graph TD
+    subgraph Bootstrap["apps/api/src/main.ts"]
+        MAIN["main.ts<br/>registers JwtAuthGuard globally<br/>registers ValidationPipe globally"]
+    end
+
+    subgraph AppRoot["App root"]
+        APPMODULE["app.module.ts<br/>imports AuthModule"]
+        APPCTRL["app.controller.ts<br/>uses the decorators below"]
+    end
+
+    subgraph AuthFolder["apps/api/src/auth/"]
+        AUTHMODULE["auth.module.ts"]
+        AUTHSERVICE["auth.service.ts<br/>(empty placeholder)"]
+        STRATEGY["jwt.strategy.ts<br/>verifies the token"]
+        GUARD["jwt-auth.guard.ts<br/>wraps the strategy"]
+        ROLESGUARD["roles.guard.ts"]
+        PUBLICDEC["public.decorator.ts"]
+        ROLESDEC["roles.decorator.ts"]
+        CURRENTUSERDEC["current-user.decorator.ts"]
+        JWTPAYLOAD["jwt-payload.interface.ts<br/>raw token shape"]
+        USERPAYLOAD["user-payload.interface.ts<br/>enriched user shape"]
+    end
+
+    PRISMA["PrismaService<br/>(account.profiles lookup)"]
+
+    MAIN -->|instantiates & registers globally| GUARD
+    APPMODULE -->|imports| AUTHMODULE
+    AUTHMODULE -->|registers as provider| STRATEGY
+    AUTHMODULE -->|registers as provider| AUTHSERVICE
+    AUTHMODULE -->|depends on| PRISMA
+
+    GUARD -->|"extends AuthGuard('jwt'), delegates to"| STRATEGY
+    GUARD -->|reads metadata written by| PUBLICDEC
+
+    STRATEGY -->|receives raw claims shaped as| JWTPAYLOAD
+    STRATEGY -->|queries| PRISMA
+    STRATEGY -->|"validate() returns"| USERPAYLOAD
+
+    ROLESGUARD -->|reads metadata written by| ROLESDEC
+    ROLESGUARD -->|reads request.user shaped as| USERPAYLOAD
+
+    CURRENTUSERDEC -->|pulls request.user shaped as| USERPAYLOAD
+
+    APPCTRL -->|"@Public()"| PUBLICDEC
+    APPCTRL -->|"@Roles(...)"| ROLESDEC
+    APPCTRL -->|"@UseGuards(RolesGuard)"| ROLESGUARD
+    APPCTRL -->|"@CurrentUser()"| CURRENTUSERDEC
+```
+
+**How to read this**: `main.ts` only ever touches `JwtAuthGuard` directly — everything else (`RolesGuard`, the decorators) is applied per-controller, which is exactly why `AppController` needed its own explicit `@UseGuards(RolesGuard)` to make its `@Roles(AppRole.ADMIN)` actually take effect (see the correction above). The two interface files (`jwt-payload.interface.ts`, `user-payload.interface.ts`) aren't wired in via imports the way the guards/decorators are — they're pure types, flowing through `jwt.strategy.ts` as its input and output shapes respectively. Every controller across the app (`AppController`, `ToursController`, `ReviewsController`, etc.) connects into this same shared set of 10 files — `auth/` is written once and reused everywhere, never duplicated per feature module.
+
 ### When: the request lifecycle, step by step
 
 ```
@@ -225,6 +279,56 @@ RolesGuard.canActivate()
 Controller method runs
   @CurrentUser() pulls request.user as a typed parameter
 ```
+
+**The same flow, with every participant named explicitly** — useful when you need to know exactly which file is responsible at each step, not just the general shape:
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant JAG as JwtAuthGuard<br/>(global, main.ts)
+    participant Strat as JWTStrategy
+    participant Prisma as PrismaService
+    participant RG as RolesGuard<br/>(per-controller)
+    participant Ctrl as Controller
+
+    Client->>JAG: HTTP request
+    JAG->>JAG: reflector checks @Public() metadata
+
+    alt Route is @Public()
+        JAG-->>Ctrl: skip authentication entirely
+    else Route requires authentication
+        JAG->>Strat: delegate to Passport 'jwt' strategy
+        Strat->>Strat: decode header (unverified) to read "alg"
+        Strat->>Strat: HS256 → SUPABASE_JWT_SECRET<br/>ES256/RS256 → JWKS public key
+        Strat->>Strat: verify signature with the matched key
+
+        alt Signature invalid, expired, or missing
+            Strat-->>Client: 401 Unauthorized
+        else Signature valid
+            Strat->>Prisma: findUnique(account.profiles, where id = sub)
+            Prisma-->>Strat: profile row (role, partnerId, name, avatar)
+            Strat-->>JAG: enriched UserPayload attached as request.user
+            JAG-->>RG: proceed
+            RG->>RG: reflector checks @Roles(...) metadata
+
+            alt No @Roles() on this route
+                RG-->>Ctrl: allow — any authenticated user
+            else @Roles(...) present
+                RG->>RG: compare request.user.role against the list
+                alt Role not in the list
+                    RG-->>Client: 403 Forbidden
+                else Role allowed
+                    RG-->>Ctrl: allow
+                end
+            end
+        end
+    end
+
+    Ctrl->>Ctrl: @CurrentUser() extracts request.user
+    Ctrl-->>Client: handler runs, response returned
+```
+
+**One thing this sequence diagram makes visually obvious that's easy to miss in prose**: `RolesGuard` only ever runs at all for routes where a controller has explicitly added `@UseGuards(RolesGuard)` — it isn't global like `JwtAuthGuard`. A controller that forgets this (as `AppController` did for `/profile` before the fix above) never reaches the `RolesGuard` lane of this diagram at all; execution goes straight from the strategy's success to the controller, and any `@Roles(...)` metadata sitting on that route is simply never read by anything.
 
 **Worth knowing for debugging**: a `401` means `JwtAuthGuard` rejected the request — the token itself is missing, malformed, expired, or fails signature verification. A `403` means the token was perfectly valid, but `RolesGuard` rejected the *role*. These are genuinely different failures with different fixes — confusing them wastes debugging time (this is exactly what happened in the incident that prompted this section: a `401` with zero controller-side output meant the problem was in token *verification*, not in which role was logged in, and the role never got a chance to matter).
 
@@ -271,6 +375,62 @@ echo "$TOKEN" | cut -d. -f1 | tr '_-' '/+' | base64 -d 2>/dev/null; echo   # hea
 echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null; echo   # payload: check "iss"
 ```
 `iss` tells you definitively which Supabase instance issued the token (`http://127.0.0.1:54321/...` = local, `https://[project-ref].supabase.co/...` = live) — useful any time a token behaves unexpectedly and you're not sure which environment it actually came from.
+
+### How to protect a new controller or route: what, when, where, why, how
+
+**The one thing that changes everything below, and is easy to miss**: `JwtAuthGuard` is registered **globally**, in `apps/api/src/main.ts`:
+```ts
+app.useGlobalGuards(new JwtAuthGuard(reflector));
+```
+This means **every route in the entire app already requires a valid JWT by default** — you do not need to add `JwtAuthGuard` again on a new controller. (`ToursController` and `ReviewsController` both currently do add it again via `@UseGuards(JwtAuthGuard, RolesGuard)` — harmless, since it just runs the same deterministic check twice, but redundant. Worth cleaning up to `@UseGuards(RolesGuard)` only, next time either file is touched, so new controllers copy the correct pattern rather than the redundant one.)
+
+Given that, here's the actual decision tree for a new controller or route:
+
+**1. Does this route need to be reachable *without* authentication at all** (health checks, a public tour listing, a webhook)? → Add `@Public()` on that specific route (or the whole controller). This is the *only* thing that opts a route out of the global guard.
+```ts
+import { Public } from 'src/auth/public.decorator';
+
+@Public()
+@Get('health')
+check() { return { status: 'ok' }; }
+```
+
+**2. Does this route need to work for *any* authenticated user, regardless of role** (e.g., "get my own profile")? → Do nothing extra. The global guard already covers "must be logged in"; there's no role restriction to add.
+
+**3. Does this route need to be restricted to *specific roles*** (what `ReviewsController`'s `create()` needed — customers only)? → Add `RolesGuard` **at the controller level** via `@UseGuards(RolesGuard)`, then `@Roles(...)` on each method that needs restricting:
+```ts
+import { UseGuards } from '@nestjs/common';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/auth/roles.decorator';
+import { AppRole } from 'src/generated/prisma/enums';
+
+@Controller('bookings/:bookingId/reviews')
+@UseGuards(RolesGuard)   // NOT JwtAuthGuard — that's already global
+export class ReviewsController {
+  @Post()
+  @Roles(AppRole.CUSTOMER)
+  create(...) { ... }
+}
+```
+**Why `@UseGuards(RolesGuard)` goes on the controller, but `@Roles(...)` goes on the method**: `RolesGuard` needs to run on *every* route in the controller (it has to check even routes with no `@Roles()` at all — see its implementation, it returns `true` when no roles are required). `@Roles(...)` is metadata, not a guard — it only marks *which* roles a specific method allows; a method with no `@Roles()` at all is allowed for any authenticated user once `RolesGuard` lets it through unrestricted.
+
+**4. Does this route need to know *who* the current user is, not just verify they're allowed in?** → Add `@CurrentUser()` as a parameter, typed as `UserPayload` from `src/auth/user-payload.interface.ts`:
+```ts
+import { CurrentUser } from 'src/auth/current-user.decorator';
+import type { UserPayload } from 'src/auth/user-payload.interface';
+
+create(@CurrentUser() user: UserPayload, ...) { ... }
+```
+Import it as `import type { ... }` (a type-only import) rather than a regular import — `UserPayload` is purely a compile-time type with no runtime code behind it, and `import type` makes that explicit and lets TypeScript elide it entirely from the compiled output.
+
+**Quick reference table:**
+
+| You need... | Add |
+| :--- | :--- |
+| No auth at all | `@Public()` |
+| Any logged-in user | Nothing — global guard already covers it |
+| Specific role(s) only | `@UseGuards(RolesGuard)` on the controller + `@Roles(...)` on the method |
+| The current user's data | `@CurrentUser() user: UserPayload` as a parameter |
 
 ### Common Auth Errors & Fixes
 
@@ -965,6 +1125,21 @@ npx prisma migrate dev --name add_review_moderation_flag
 
 This diffs your change against the shadow database, writes `prisma/migrations/<timestamp>_add_review_moderation_flag/migration.sql`, applies it to local Supabase, and regenerates the Prisma Client — all in one command.
 
+**If you realize mid-feature that you forgot a field** (this happened for real building the Reviews module — `bookingId` was missing from `schema.prisma` until after `isFlagged`'s migration had already been generated and applied): **create a second, separate migration — never edit the one you already generated**, even though it's for "the same feature." A migration tracks one schema change at a point in time, not a project-management unit; it's completely normal, and already precedented elsewhere in this project's own history, for one feature to span several small migrations as the design firms up.
+
+```bash
+# Add the missing field to schema.prisma, then:
+npx prisma migrate dev --name add_review_booking_id
+```
+
+The only time editing an *existing* migration file is reasonable is when it has never been shared or deployed anywhere beyond your own local database (the same test git applies to amending a commit) — and even then, generating a new one is usually just as easy and avoids having to re-verify the whole shadow-database replay chain. When in doubt, generate a new migration.
+
+**If your editor doesn't show a newly-added field's type right after this** (e.g., autocomplete doesn't offer `bookingId` yet) — this is almost always the TypeScript language server holding a stale cached snapshot of the generated client, not a real problem. Try "TypeScript: Restart TS Server" from your editor's command palette first. If the type is still genuinely missing after that, run generation manually:
+```bash
+npx prisma generate
+```
+`migrate dev` already runs this automatically as its last step — you should rarely need to run it by hand — but it's a safe, idempotent command to reach for any time you suspect the generated client is out of sync with `schema.prisma`.
+
 ### 5. Implement the feature
 
 ```ts
@@ -1066,6 +1241,84 @@ DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@[POOLER_HOST]:5432/
 Then deploy the application code itself — see "Deployment" below. The deployed API's runtime `DATABASE_URL` is supplied by the hosting platform (a Render/Railway environment variable), never read from this repo's `.env`, for the same reason the live URL never lives in `.env` locally.
 
 **If working with collaborators later**: each person develops against their own local Supabase instance independently — nothing about steps 1–7 involves the shared live project at all, so there's no coordination needed until step 9. Migration file conflicts in a PR are resolved the same way as any other code conflict; keeping individual migrations small (one logical change each) makes that rare in practice.
+
+---
+
+## 🧱 Service, Controller, and Module Design Lessons
+
+General patterns worth following in every service/controller going forward, surfaced while building the Reviews module (`apps/api/src/reviews/`) — worth reading once, then treating as a checklist for the next feature.
+
+### Order your validation checks deliberately, not just "does it work"
+
+`ReviewsService.create()` went through several rounds of fixes because checks were ordered by what was easiest to write first, not by what's actually safe to evaluate first. The general rule: **check existence before touching any property on the thing that might not exist**, then ownership, then business-rule state, in that order:
+
+```ts
+if (!currentBooking) {
+  throw new NotFoundException('Booking not found');        // 1. Does it exist at all?
+}
+if (currentBooking.customerId !== user.id) {
+  throw new ForbiddenException('...');                       // 2. Do they own it?
+}
+if (currentBooking.status !== BookingStatus.COMPLETED) {
+  throw new BadRequestException('...');                       // 3. Is it in the right state?
+}
+```
+A real bug this project hit from getting this wrong: `currentBooking?.customerId !== user.id` (optional chaining) *looked* safe because it couldn't crash, but a nonexistent booking silently produced `undefined !== user.id` → `true` → a misleading `403 Forbidden` instead of the correct `404 Not Found`. Optional chaining prevents a crash; it doesn't make the *logic* correct. When you find yourself reaching for `?.` to avoid a crash, stop and ask whether that case deserves its own explicit, earlier check instead.
+
+### Derive values from trusted relations — don't accept them twice
+
+The Reviews feature briefly had both a `:tourId` URL param *and* a `bookingId` whose own record already knows its tour — two independent sources of truth that could disagree, with nothing stopping a client from sending mismatched values. The fix wasn't validating that they matched; it was removing the redundant input entirely and deriving `tourId` from the booking's own relation:
+```ts
+const currentBooking = await this.prisma.booking.findUnique({
+  where: { id: bookingId },
+  include: { tourSchedule: { select: { tourId: true } } },
+});
+// tourId comes from here — never from client-supplied input
+```
+If two pieces of data *can* disagree, prefer eliminating one of them over adding a check that they match.
+
+### A `?.` that quietly produces `undefined` can hide a real data problem
+
+`tourId: currentBooking.tourSchedule?.tourId` compiles fine and never crashes — but if `tourSchedule` is ever genuinely `null`, Prisma treats the resulting `undefined` as "omit this field," silently creating a row with `tour_id = NULL` instead of failing loudly. Any time `?.` sits directly inside data you're about to persist, ask whether a missing value there is actually an error condition that deserves its own explicit guard and exception, rather than being allowed to flow silently into the database.
+
+### A database constraint prevents bad data; your code decides how that failure is presented
+
+A `@unique` constraint (or a foreign key, a check constraint) is what actually makes a rule unbreakable — not an application-level "check, then write," which always has a race-condition window between the check and the write. But the constraint firing produces a generic, low-level database error, not a clean API response. Both pieces are needed, and they do different jobs: the constraint enforces correctness, your `try/catch` around the write translates its failure into the specific HTTP response your API should give.
+```ts
+try {
+  return await this.prisma.review.create({ data: { ... } });
+} catch (error) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    throw new ConflictException('...');
+  }
+  throw error;
+}
+```
+Keep the fast application-level check too (it gives a quicker, friendlier rejection in the common, non-racy case) — just don't treat it as sufficient on its own for anything a unique constraint could also enforce.
+
+### Accept the narrowest type a service actually needs — let structural typing do the work
+
+`ReviewsService.create()` declares its user parameter as `{ id: string, role: AppRole }`, while the controller passes the full `UserPayload` object. This isn't a mismatch to fix — TypeScript's structural typing means any object *containing at least* those two fields satisfies the narrower type automatically, no casting or manual destructuring required. The payoff: the service's signature is an honest, minimal declaration of exactly what it depends on, independent of whatever other fields `UserPayload` happens to carry elsewhere in the app. When a service only needs a couple of fields off a larger object, declare the narrow inline shape you need rather than importing and requiring the full concrete type.
+
+### Validate and whitelist DTOs globally — then trust that it's actually on
+
+`class-validator` decorators (`@IsInt()`, `@Min()`, `@MaxLength()`, etc.) do nothing at runtime unless a global `ValidationPipe` is registered — they're inert metadata otherwise. This project's `main.ts` already has it configured correctly:
+```ts
+app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
+```
+`whitelist: true` is what actually strips (and `forbidNonWhitelisted` rejects outright) any field a client sends that isn't declared on the DTO — this is what stops a client from sneaking `isFlagged: true` into a review-creation request even though the DTO class itself never mentions it. A DTO "looking" clean only matters because this global configuration is what enforces it; the two are a pair, not independent safeguards.
+
+### A `BigInt(...)`/`parseInt(...)` on a URL param can throw before your service ever runs
+
+`BigInt(bookingId)` in a controller throws a raw, uncaught `SyntaxError` for a non-numeric param — before any of your service's careful error handling gets a chance to run, producing a `500` for what should obviously be a `400`. Wrap any such parsing at the boundary where client input first gets coerced to a different type:
+```ts
+let parsedBookingId: bigint;
+try {
+  parsedBookingId = BigInt(bookingId);
+} catch {
+  throw new BadRequestException('Invalid booking ID');
+}
+```
 
 ---
 
@@ -1260,4 +1513,4 @@ _Software Engineer · Nix Enthusiast_
 
 ---
 
-**Last Updated**: October 2, 2026
+**Last Updated**: October 4, 2026

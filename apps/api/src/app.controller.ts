@@ -2,15 +2,13 @@ import { Controller, Get } from '@nestjs/common';
 
 import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
-import { Roles } from './auth/roles.decorator';
 
-import { AppRole } from './generated/prisma/enums';
+import type { UserPayload } from './auth/user-payload.interface';
 
 @Controller()
 export class AppController {
   @Get('profile')
-  @Roles(AppRole.ADMIN) // only admin can access this example
-  getProfile(@CurrentUser() user: any) {
+  getProfile(@CurrentUser() user: UserPayload) {
     return user;
   }
 

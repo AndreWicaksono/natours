@@ -758,10 +758,12 @@ model PlatformTransfer {
 
 model Review {
   id         BigInt    @id @default(autoincrement())
+  bookingId  BigInt    @unique @map("booking_id")
   reviewText String?   @map("review_text")
   rating     Int?
   tourId     BigInt?   @map("tour_id")
   customerId String?   @map("customer_id") @db.Uuid
+  isFlagged  Boolean?  @default(false) @map("is_flagged")
   createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   user       User?     @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tour       Tour?     @relation(fields: [tourId], references: [id], onDelete: NoAction, onUpdate: NoAction)

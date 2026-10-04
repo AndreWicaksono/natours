@@ -13,6 +13,7 @@ import { PartnersModule } from './partners/partners.module';
 
 import { PaymentsModule } from './payments/payments.module';
 
+import { ReviewsModule } from './reviews/reviews.module';
 import { ToursModule } from './tours/tours.module';
 
 @Module({
@@ -24,8 +25,9 @@ import { ToursModule } from './tours/tours.module';
     BookingsModule,
     PaymentsModule,
     PartnersModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

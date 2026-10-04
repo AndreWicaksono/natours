@@ -22,11 +22,11 @@
 | **Booking Status Enhancement** | ✅ Complete          | Added `ONGOING`, `COMPLETED`, `NO_SHOW` statuses; check-in endpoint; auto-status cron job |
 | **Payments Module**            | ✅ Complete          | Stripe Connect integration, webhooks, platform transfers                                  |
 | **Partners Module**            | ✅ Complete          | Stripe Connect onboarding, account linking, status tracking                               |
-| **Reviews Module**             | ⬜ **Next**          | Rating and review management for completed tours                                          |
-| **Wishlists Module**           | ⬜ **After Reviews** | User wishlist management for favorite tours                                               |
-| **Profiles Module**            | ⬜ **Optional**      | User profile management (already has `Profile` model, may be handled by frontend)         |
+| **Reviews Module**             | ✅ Complete          | One review per booking (`@unique` on `bookingId`), ownership + `COMPLETED`-status checks, admin moderation flag, race-condition-safe via DB constraint + `P2002` handling |
+| **Wishlists Module**           | ⬜ **Next**          | User wishlist management for favorite tours                                               |
+| **Profiles Module**            | 🟡 **Partial**       | `GET /profile` (self-service, any authenticated user) implemented directly in `AppController` — see "Next Steps" for the remaining write/admin/lookup endpoints, which deserve their own `profiles.{module,controller,service}.ts` |
 
-**Current Focus**: Building the **Reviews Module** to allow customers to leave feedback on completed tours.
+**Current Focus**: Building the **Wishlists Module** to let customers save favorite tours.
 
 ---
 
@@ -36,6 +36,7 @@
 
 | Date             | Commit                                                                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | :--------------- | :--------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Oct 4, 2026** | `feat(api): implement Reviews module with booking-based uniqueness and moderation` | Added `ReviewsModule` (`apps/api/src/reviews/`): `POST /bookings/:bookingId/reviews`, customer-only, one review per booking enforced via `@unique` on `Review.bookingId` (not `(tourId, customerId)` — a customer can legitimately book and review the same tour again on a different `tour_schedules` date, which the old constraint would have blocked). Business rules: booking must belong to the requesting customer, must be `COMPLETED` (not merely `CONFIRMED`), `tourId` is derived server-side from `booking.tourSchedule.tourId` rather than accepted as a redundant URL param (eliminates a client-supplied-mismatch risk rather than just validating against it). Race condition between the existence check and the write is closed by catching `Prisma.PrismaClientKnownRequestError` code `P2002` around `review.create()` and converting it to a clean `409 Conflict`. `isFlagged` (admin moderation) is excluded from `CreateReviewDTO` and additionally protected by the global `ValidationPipe`'s `whitelist`/`forbidNonWhitelisted` config, so it can't be set by a client regardless. Required a second migration (`add_review_booking_id`) after the field was initially missed in the first (`add_review_moderation_flag`) — handled as a new migration, not an edit to the already-applied one, per `README.md`'s documented pattern. Added `README.md` → "How to protect a new controller" (clarifying `JwtAuthGuard` is global, so per-controller `@UseGuards` only needs `RolesGuard`) and a new "Service, Controller, and Module Design Lessons" section generalizing the check-ordering, derived-values, and DTO-whitelisting patterns from this feature for future ones. |
 | **Oct 2, 2026** | `fix(auth): support both HS256 and ES256 JWT signing in JWTStrategy` | Local Supabase (CLI v2.33.5) issues HS256-signed tokens; the live project issues ES256 via JWKS. `JWTStrategy` was hardcoded to ES256-only, silently rejecting every locally-issued token with 401 before reaching any controller — confirmed via decoding a local token's header (`alg: HS256`) and `iss` (`http://127.0.0.1:54321/auth/v1`). Fixed by having `secretOrKeyProvider` branch on the token's own (unverified) header `alg`, routing HS256 to `SUPABASE_JWT_SECRET` and ES256/RS256 to the existing JWKS provider — each algorithm only ever matches its own key material, so this is not the classic algorithm-confusion vulnerability. Fix is permanent regardless of local Supabase CLI version. Added a full "Authentication & Authorization" section to `README.md` documenting the auth system end-to-end (what/who/where/when/why/how across all 10 files in `apps/api/src/auth/`), including the request lifecycle, the 401-vs-403 distinction, and a local-testing recipe. |
 | **Sep 30, 2026** | `fix(prisma): guard Supabase-owned objects and avoid destructive column rewrite in shadow-database replay` | `0_baseline` directly used `auth.uid()`, the PostGIS `geography` type, and a foreign key into `auth.users` — none of which exist in Prisma's auto-created shadow database, since Postgres schemas/extensions/tables are scoped per-database, not per-server, and the shadow database is a freshly-created sibling with no relationship to Supabase's own bootstrap. Added guarded stubs (a `pg_catalog` existence check inside a PL/pgSQL `IF`, never a bare `CREATE ... IF NOT EXISTS`) that create each object only when genuinely absent — full no-ops on local/live databases, functional only in the shadow database. Discovered along the way: `permission denied for schema auth` occurs even with `IF NOT EXISTS` if the existence check isn't inside the `IF` condition, since Postgres checks `CREATE` privilege before evaluating existence at all. Also fixed `1_add_transfer_status`: its `DROP COLUMN "status"` / `ADD COLUMN "status"` sequence silently dropped `platform_transfers_status_idx` as a side effect (Postgres auto-drops indexes when their column is dropped), invisible until a later `migrate dev` run recreated it. Replaced with `ALTER COLUMN ... TYPE ... USING ...`, achieving the same final column shape without ever dropping the column. Verified via two full `prisma migrate reset` cycles replaying all 6 migrations cleanly. Documented both patterns in `README.md`'s "Database Migration" section, with new entries in the errors table, so a future Supabase-object dependency or drop/recreate pattern doesn't require rediscovering this from scratch. |
 | **Sep 27, 2026** | `fix(prisma): fix shadow database config and add local baseline migration` | Fixed `DATABASE_SHADOW_URL` misconfiguration that was breaking every local Prisma command: it had been set to the same value as `DATABASE_URL`, which Prisma explicitly refuses (`shadow database appears to be the same as the main database`), and the fix's first attempt used Prisma's strict `env()` helper for an optional variable, which throws instead of returning `undefined` when unset (`PrismaConfigEnvError`). Resolved by removing `DATABASE_SHADOW_URL` from `.env` entirely and reading it via `process.env.DATABASE_SHADOW_URL` in `prisma.config.ts`, letting Prisma auto-manage its own temporary shadow database against local Supabase's unrestricted `postgres` role. Also discovered and fixed a separate, permanent requirement: a fresh local Supabase instance (first-time setup, or after any `supabase db reset`) always fails `prisma migrate deploy`/`migrate dev` with `P3005` because Supabase's own system schemas (`auth`, `storage`, etc.) exist before Prisma has any migration history — added an empty `00_local_baseline` migration and documented the required `migrate resolve --applied 00_local_baseline` step that must precede `migrate deploy` on any genuinely fresh local database. With both fixed, ran `prisma migrate deploy` against local Supabase for the first time ever and confirmed all 4 real migrations applied successfully, creating the full application schema locally (previously, local Supabase had only ever been used as an ephemeral shadow database, never actually holding the real schema). Updated `README.md`'s "Local Development Environment", "Setting Up the Database", and error-reference sections accordingly. |
@@ -74,36 +75,39 @@
 
 ## 🎯 Next Steps
 
-### Priority 1: Reviews Module
-
-**Goal**: Implement customer reviews for completed tours.
-
-| Task                         | Description                                                                                  | Effort  |
-| :--------------------------- | :------------------------------------------------------------------------------------------- | :------ |
-| **1.1 Generate Module**      | `nest g module reviews`, `nest g controller reviews`, `nest g service reviews`               | 0.5 day |
-| **1.2 Define DTOs**          | `CreateReviewDto`, `UpdateReviewDto` with validation                                         | 0.5 day |
-| **1.3 Implement Service**    | Create, read, update, delete with business rules (one review per booking, must be completed) | 1 day   |
-| **1.4 Implement Controller** | Endpoints with role-based access (customer writes, admin moderates)                          | 0.5 day |
-| **1.5 Average Rating**       | Calculate and return average rating for a tour                                               | 0.5 day |
-| **1.6 Testing**              | Unit tests and manual testing with `curl`                                                    | 1 day   |
-
-**Estimated**: ~4 days
-
----
-
-### Priority 2: Wishlists Module
+### Priority 1: Wishlists Module
 
 **Goal**: Allow customers to save favorite tours.
 
 | Task                         | Description                                                                          | Effort  |
 | :--------------------------- | :----------------------------------------------------------------------------------- | :------ |
-| **2.1 Generate Module**      | `nest g module wishlists`, `nest g controller wishlists`, `nest g service wishlists` | 0.5 day |
-| **2.2 Define DTOs**          | `WishlistDto` with validation                                                        | 0.5 day |
-| **2.3 Implement Service**    | Add, remove, list, check if in wishlist                                              | 1 day   |
-| **2.4 Implement Controller** | Endpoints with role-based access (customer only)                                     | 0.5 day |
-| **2.5 Testing**              | Unit tests and manual testing with `curl`                                            | 0.5 day |
+| **1.1 Generate Module**      | `nest g module wishlists`, `nest g controller wishlists`, `nest g service wishlists` | 0.5 day |
+| **1.2 Define DTOs**          | `WishlistDto` with validation                                                        | 0.5 day |
+| **1.3 Implement Service**    | Add, remove, list, check if in wishlist                                              | 1 day   |
+| **1.4 Implement Controller** | Endpoints with role-based access (customer only)                                     | 0.5 day |
+| **1.5 Testing**              | Unit tests and manual testing with `curl`                                            | 0.5 day |
 
 **Estimated**: ~3 days
+
+---
+
+### Priority 2: Profiles Module — remaining endpoints
+
+**Goal**: `GET /profile` (self-service read, any authenticated user) is already implemented directly in `AppController`. The rest of this module's realistic scope for a marketplace platform with role-based accounts (customer/guide/lead-guide/admin/partner-admin):
+
+| Task                                      | Description                                                                                                                       | Effort  |
+| :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- | :------ |
+| **2.1 Generate Module, relocate `GET /profile`** | `nest g module profiles`, `nest g controller profiles`, `nest g service profiles`. `GET /profile` stays in `AppController` until this task starts — then its logic moves into `ProfilesController`/`ProfilesService`, consistent with every other feature module in this project (Tours, Bookings, Reviews, etc.) having its own dedicated trio rather than living in the app root | 0.5 day |
+| **2.2 `PATCH /profile`**                  | Self-service update — `firstName`, `lastName`, `avatarUrl` only. `role` and `partnerId` must stay out of this DTO entirely; a user must never be able to self-promote their own role | 1 day   |
+| **2.3 `GET /profiles/:id`** (admin-only)  | Look up another user's profile by ID — e.g. for customer support or partner management. This is the right place for a role restriction; `GET /profile` (no ID) is not | 0.5 day |
+| **2.4 `GET /profiles`** (admin-only)      | List/search profiles — needed for any admin user-management screen                                                                | 1 day   |
+| **2.5 `PATCH /profiles/:id/role`** (admin-only) | Change another user's role (e.g. promote a customer to `guide`, assign `partner_admin`) — a real, common need for this kind of platform, and distinct enough from a generic profile edit to deserve its own endpoint rather than folding into 2.3's lookup | 1 day   |
+| **2.6 `PATCH /profiles/:id/deactivate`** (admin-only) | `account.profiles.is_active` already exists in the schema but nothing currently reads or writes it — suggests this was anticipated but never built. Needed for suspending/banning an account without deleting it | 0.5 day |
+| **2.7 Testing**                           | Unit tests and manual testing with `curl`, including confirming a non-admin genuinely cannot reach any of 2.3–2.6                | 1 day   |
+
+**Estimated**: ~5.5 days
+
+**Worth deciding before starting**: whether avatar upload (`avatarUrl` is currently just a plain string field) should go through Supabase Storage directly from the frontend (simplest, no backend involvement) or through this API (adds a proxy endpoint but centralizes validation/limits). Not scoped above since it depends on that decision.
 
 ---
 
@@ -111,9 +115,9 @@
 
 | Task                             | Description                                       | Effort  |
 | :------------------------------- | :------------------------------------------------ | :------ |
-| **3.1 Swagger/OpenAPI**          | Add `@nestjs/swagger` for auto-generated API docs | 1 day   |
-| **3.2 Global Exception Filters** | Standardize error responses                       | 0.5 day |
-| **3.3 CORS Configuration**       | Allow frontend domains                            | 0.5 day |
+| **2.1 Swagger/OpenAPI**          | Add `@nestjs/swagger` for auto-generated API docs | 1 day   |
+| **2.2 Global Exception Filters** | Standardize error responses                       | 0.5 day |
+| **2.3 CORS Configuration**       | Allow frontend domains                            | 0.5 day |
 
 **Estimated**: ~2 days
 
@@ -140,9 +144,10 @@
 - [x] Booking Status Enhancement (`ONGOING`, `COMPLETED`, `NO_SHOW`, check-in, cron job)
 - [x] Payments Module (Stripe integration)
 - [x] Partners Module
-- [ ] Reviews Module
+- [x] Reviews Module
 - [ ] Wishlists Module
-- [ ] Profiles Module (optional – handled by auth)
+- [x] Profiles Module — self-service read (`GET /profile`)
+- [ ] Profiles Module — write/admin/lookup endpoints (see Next Steps)
 
 ### Phase 2: Database Logic Migration
 
@@ -180,6 +185,6 @@ After each meaningful commit, update the relevant sections:
 
 ## 🔄 Last Updated
 
-**Date**: October 2, 2026  
+**Date**: October 4, 2026  
 **Author**: Andre Wicaksono  
 **Branch**: `feat/nest-js`
