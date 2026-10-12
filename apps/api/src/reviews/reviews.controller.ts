@@ -14,7 +14,6 @@ import type { UserPayload } from 'src/auth/user-payload.interface';
 
 import { AppRole } from 'src/generated/prisma/enums';
 import { CreateReviewDTO } from './dto/create-review.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { ReviewsService } from './reviews.service';
 
 @Controller('bookings/:bookingId/reviews')

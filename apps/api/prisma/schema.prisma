@@ -930,6 +930,10 @@ enum PaymentStatus {
   PENDING   @map("pending")
   SUCCEEDED @map("succeeded")
   FAILED    @map("failed")
+  // BUG-5 fix: REFUNDED distinguishes a post-payment cancellation/refund from a
+  // payment failure. FAILED = payment never completed; REFUNDED = payment succeeded
+  // but the booking was subsequently cancelled and the customer is owed money back.
+  REFUNDED  @map("refunded")
 
   @@map("payment_status")
   @@schema("public")

@@ -6,12 +6,12 @@ import {
   UseGuards,
   ParseIntPipe,
   Query,
+  NotFoundException,
 } from '@nestjs/common';
 import { PartnersConnectService } from './partners-connect.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { Public } from '../auth/public.decorator';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { AppRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -38,7 +38,8 @@ export class PartnersController {
     });
 
     if (!partner) {
-      return { error: 'Partner not found.' };
+      // BP-5 FIX: Throw HTTP exception instead of returning a 200 JSON object with an error string
+      throw new NotFoundException('Partner not found.');
     }
 
     const result = await this.connectService.generateOnboardingLink(
@@ -79,7 +80,8 @@ export class PartnersController {
     });
 
     if (!partner) {
-      return { error: 'Partner not found.' };
+      // BP-5 FIX
+      throw new NotFoundException('Partner not found.');
     }
 
     if (!partner.stripeAccountId) {

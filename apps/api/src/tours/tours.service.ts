@@ -160,10 +160,26 @@ export class ToursService {
       throw new NotFoundException(`Tour with ID ${id} not found.`);
     }
 
-    // Partner isolation
-    if (user.role !== AppRole.ADMIN) {
+    // BUG-4 FIX: The previous check applied partner isolation to ALL non-admin roles,
+    // including CUSTOMER. A customer has partnerId = null, so `null !== somePartnerId`
+    // is always true → every customer got a 403 on any individual tour detail page.
+    //
+    // Correct logic:
+    //   - PARTNER_ADMIN / GUIDE / LEAD_GUIDE: may only see tours for their own partner
+    //   - CUSTOMER: may only see LIVE (published) tours; isDeleted=false already filtered above
+    //   - ADMIN: sees everything (no additional check)
+    if (
+      user.role === AppRole.PARTNER_ADMIN ||
+      user.role === AppRole.GUIDE ||
+      user.role === AppRole.LEAD_GUIDE
+    ) {
       if (tour.partnerId !== user.partnerId) {
         throw new ForbiddenException('You do not have access to this tour.');
+      }
+    } else if (user.role === AppRole.CUSTOMER) {
+      if (tour.status !== TourStatus.LIVE) {
+        // Treat non-live tours as not-found for customers (don't leak existence of drafts)
+        throw new NotFoundException(`Tour with ID ${id} not found.`);
       }
     }
 

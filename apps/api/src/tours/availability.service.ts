@@ -8,17 +8,15 @@ export class AvailabilityService {
   constructor(private prisma: PrismaService) {}
 
   async getAvailableDates(tourId: number, month: number, year: number) {
-    const rule = await this.prisma.availabilityRule.findFirst({
+    // BUG-7 FIX: Use findMany to get ALL rules for a tour instead of just findFirst.
+    // A tour might have one rule for weekends and another for weekdays. findFirst
+    // silently ignored all but the first rule, resulting in incomplete availability.
+    const rules = await this.prisma.availabilityRule.findMany({
       where: { tourId },
     });
 
-    if (!rule) {
-      this.logger.debug(`No availability rule found for tour ${tourId}`);
-      return [];
-    }
-
-    if (!rule.startDate || !rule.startTime) {
-      this.logger.warn(`Rule for tour ${tourId} is missing startDate or startTime`);
+    if (!rules || rules.length === 0) {
+      this.logger.debug(`No availability rules found for tour ${tourId}`);
       return [];
     }
 
@@ -43,43 +41,55 @@ export class AvailabilityService {
     );
 
     const availableSlots: string[] = [];
-    const currentDate = new Date(startOfMonth);
-
-    // ✅ Extract time from the stored time value
-    const startTime = new Date(rule.startTime);
-    const hours = startTime.getUTCHours();
-    const minutes = startTime.getUTCMinutes();
-
     const now = new Date();
 
+    // Iterate over every day in the month
+    const currentDate = new Date(startOfMonth);
     while (currentDate <= endOfMonth) {
       const dateStr = currentDate.toISOString().slice(0, 10);
       const dayOfWeek = currentDate.getUTCDay();
 
-      const withinRange =
-        currentDate >= rule.startDate &&
-        (!rule.endDate || currentDate <= rule.endDate);
+      // Skip exceptions entirely for this day
+      if (!exceptionDates.has(dateStr)) {
+        // Test all rules against this date
+        for (const rule of rules) {
+          if (!rule.startDate || !rule.startTime) continue;
 
-      const dayMatches = rule.daysOfWeek !== null
-        ? (rule.daysOfWeek & (1 << dayOfWeek)) !== 0
-        : false;
+          const withinRange =
+            currentDate >= rule.startDate &&
+            (!rule.endDate || currentDate <= rule.endDate);
 
-      if (withinRange && dayMatches && !exceptionDates.has(dateStr)) {
-        const departure = new Date(currentDate);
-        departure.setUTCHours(hours, minutes, 0, 0);
+          const dayMatches =
+            rule.daysOfWeek !== null
+              ? (rule.daysOfWeek & (1 << dayOfWeek)) !== 0
+              : false;
 
-        // ✅ Check departure is at least 1 hour from now
-        const minBookingTime = new Date(now.getTime() + 60 * 60 * 1000);
-        if (departure > minBookingTime) {
-          availableSlots.push(departure.toISOString());
+          if (withinRange && dayMatches) {
+            // Generate the slot for this rule
+            const startTime = new Date(rule.startTime);
+            const hours = startTime.getUTCHours();
+            const minutes = startTime.getUTCMinutes();
+
+            const departure = new Date(currentDate);
+            departure.setUTCHours(hours, minutes, 0, 0);
+
+            // Check departure is at least 1 hour from now
+            const minBookingTime = new Date(now.getTime() + 60 * 60 * 1000);
+            if (departure > minBookingTime) {
+              availableSlots.push(departure.toISOString());
+            }
+          }
         }
       }
 
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
 
+    // Deduplicate slots (in case overlapping rules generate the same exact time)
+    const uniqueSlots = Array.from(new Set(availableSlots)).sort();
+
     const grouped: Record<string, string[]> = {};
-    for (const iso of availableSlots) {
+    for (const iso of uniqueSlots) {
       const dateKey = iso.slice(0, 10);
       if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(iso);

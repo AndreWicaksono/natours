@@ -84,8 +84,9 @@ export class PartnersConnectService {
     try {
       const accountLink = await this.stripe.accountLinks.create({
         account: stripeAccountId,
-        refresh_url: `${this.configService.get('SITE_URL')}/partners/onboarding/refresh`,
-        return_url: `${this.configService.get('SITE_URL')}/partners/onboarding/complete`,
+        // BP-6 FIX: APP_URL instead of SITE_URL (matches README env var docs)
+        refresh_url: `${this.configService.get('APP_URL')}/partners/onboarding/refresh`,
+        return_url: `${this.configService.get('APP_URL')}/partners/onboarding/complete`,
         type: 'account_onboarding',
       });
 
