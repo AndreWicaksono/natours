@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  BadGatewayException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -119,7 +121,7 @@ export class BookingsService {
               gte: new Date(startDate.toISOString().slice(0, 10)),
               lt: new Date(
                 new Date(startDate.toISOString().slice(0, 10)).getTime() +
-                  24 * 60 * 60 * 1000,
+                24 * 60 * 60 * 1000,
               ),
             },
           },
@@ -284,8 +286,10 @@ export class BookingsService {
         },
       ],
       mode: 'payment',
-      success_url: `${this.configService.get('SITE_URL')}/payment-success?booking_id=${booking.id}`,
-      cancel_url: `${this.configService.get('SITE_URL')}/payment-cancelled`,
+      // BP-6 FIX: README documents APP_URL; code previously read SITE_URL (undefined in
+      // any env that only defines APP_URL → Stripe redirects silently pointed to undefined).
+      success_url: `${this.configService.get('APP_URL')}/payment-success?booking_id=${booking.id}`,
+      cancel_url: `${this.configService.get('APP_URL')}/payment-cancelled`,
       metadata: {
         booking_id: booking.id.toString(),
         user_id: user.id,
@@ -369,15 +373,34 @@ export class BookingsService {
       );
     }
 
-    const price = Number(booking.pricePaid ?? 0);
+    // BUG-8 FIX (corrected): price and currency come from the TOUR, exactly as in
+    // createBookingWithCheckout(). The first attempt read `booking.pricePaid` /
+    // `booking.currencyPaid`, but nothing in this codebase ever writes those columns —
+    // so the price was always 0, the platform fee was always 0, and Stripe rejects a
+    // $0 Checkout Session. (Snapshotting the price on the booking at creation time would
+    // protect against a partner changing the price mid-checkout; that's a separate change.)
+    const price = Number(tour.price ?? 0);
     const unitAmount = Math.round(price * 100);
+    if (unitAmount <= 0) {
+      throw new BadRequestException('This tour has no valid price.');
+    }
+    const totalAmount = unitAmount * (booking.seatsBooked ?? 1);
+
+    // The original resumePayment session omitted `application_fee_amount`, so the
+    // platform earned zero commission on any resumed payment. Re-calculate the platform
+    // fee here, identical to the logic in createBookingWithCheckout().
+    const PLATFORM_FEE_PERCENTAGE =
+      this.configService.get<number>('PLATFORM_FEE_PERCENTAGE') || 10;
+    const platformFee = Math.round(
+      (totalAmount * PLATFORM_FEE_PERCENTAGE) / 100,
+    );
 
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: booking.currencyPaid || 'usd',
+            currency: tour.currency || 'usd',
             product_data: {
               name: tour.name ?? 'Tour',
             },
@@ -387,13 +410,16 @@ export class BookingsService {
         },
       ],
       mode: 'payment',
-      success_url: `${this.configService.get('SITE_URL')}/payment-success?booking_id=${booking.id}`,
-      cancel_url: `${this.configService.get('SITE_URL')}/payment-cancelled`,
+      // BP-6 FIX: Use APP_URL (matches README env var docs) instead of SITE_URL.
+      success_url: `${this.configService.get('APP_URL')}/payment-success?booking_id=${booking.id}`,
+      cancel_url: `${this.configService.get('APP_URL')}/payment-cancelled`,
       metadata: {
         booking_id: booking.id.toString(),
         user_id: user.id,
+        partner_id: tour.partnerId.toString(),
       },
       payment_intent_data: {
+        application_fee_amount: platformFee, // BUG-8 FIX: was missing
         transfer_data: {
           destination: partner.stripeAccountId,
         },
@@ -401,6 +427,7 @@ export class BookingsService {
         metadata: {
           booking_id: booking.id.toString(),
           user_id: user.id,
+          partner_id: tour.partnerId.toString(),
         },
       },
     });
@@ -458,7 +485,7 @@ export class BookingsService {
     this.logger.log(`⏰ Booking ${bookingId} expired and seats released.`);
   }
 
-  // --- Cancel booking (user) ---
+  // --- Cancel booking (customer, or admin / partner admin acting on their behalf) ---
   async cancelBooking(user: UserPayload, bookingId: number) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -466,75 +493,200 @@ export class BookingsService {
     });
     if (!booking) throw new NotFoundException('Booking not found.');
     this.checkAccess(user, booking);
-    // Check if booking status is already cancelled or expired
-    if (
-      booking.status === BookingStatus.CANCELLED ||
-      booking.status === BookingStatus.EXPIRED
-    ) {
-      throw new BadRequestException(`Booking is already ${booking.status}.`);
+
+    // BUG-9 FIX (user-facing path): only unpaid (PENDING) and paid-but-not-yet-started
+    // (CONFIRMED) bookings may be cancelled. The previous check only rejected CANCELLED
+    // and EXPIRED, so a customer could "cancel" a COMPLETED or NO_SHOW booking after the
+    // tour — releasing seats on a past schedule and flagging the payment as refunded.
+    // ONGOING (already checked in) is excluded too; if you want to allow it, make that an
+    // explicit business rule rather than an accident of a missing guard.
+    const cancellableStatuses: BookingStatus[] = [
+      BookingStatus.PENDING,
+      BookingStatus.CONFIRMED,
+    ];
+    if (!cancellableStatuses.includes(booking.status as BookingStatus)) {
+      throw new BadRequestException(
+        `A booking that is ${booking.status} cannot be cancelled.`,
+      );
     }
     if (!booking.tourSchedule)
       throw new BadRequestException('Tour schedule not found.');
-    await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
+
+    const wasPaid = booking.status === BookingStatus.CONFIRMED;
+    const startDate = booking.tourSchedule.startDate;
+    if (wasPaid && startDate && startDate <= new Date()) {
+      throw new BadRequestException(
+        'This tour has already started and can no longer be cancelled.',
+      );
+    }
+
+    // BUG-5 FIX (corrected): a paid booking is only marked REFUNDED if a refund was
+    // actually issued. The first attempt set REFUNDED without ever calling Stripe, so the
+    // database claimed a refund that never happened. We now refund FIRST: if Stripe
+    // fails, an error is thrown and NOTHING has changed — the booking stays CONFIRMED and
+    // the customer can retry.
+    if (wasPaid) {
+      await this.refundBookingPayment(bookingId);
+    }
+
+    // Conditional on the status we read above, so a concurrent change (e.g. the
+    // `checkout.session.completed` webhook confirming a PENDING booking at the same
+    // moment) can't be silently overwritten.
+    const cancelled = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.booking.updateMany({
+        where: { id: bookingId, status: booking.status },
         data: { status: BookingStatus.CANCELLED },
       });
+      if (result.count === 0) return false;
+
       await tx.tourSchedule.update({
         where: { id: booking.tourSchedule!.id },
         data: { seatsAvailable: { increment: booking.seatsBooked ?? 0 } },
       });
+      return true;
     });
 
-    // ✅ Update payment status to FAILED
-    await this.paymentsService.updatePaymentStatus(
-      bookingId,
-      PaymentStatus.FAILED,
-    );
+    if (!cancelled) {
+      // If a refund was already issued above, the `charge.refunded` webhook reconciles
+      // the booking and payment records when it arrives (see cancelBookingByAdmin).
+      throw new ConflictException(
+        'This booking changed while it was being cancelled. Please refresh and try again.',
+      );
+    }
+
+    // PENDING → payment never succeeded → FAILED. CONFIRMED → a refund was just issued
+    // above → REFUNDED.
+    const paymentStatus = wasPaid
+      ? PaymentStatus.REFUNDED
+      : PaymentStatus.FAILED;
+    await this.paymentsService.updatePaymentStatus(bookingId, paymentStatus);
 
     this.logger.log(
-      `❌ Booking ${bookingId} cancelled, seats released, and payment marked FAILED.`,
+      `❌ Booking ${bookingId} cancelled, seats released, payment marked ${paymentStatus}.`,
     );
     return { message: 'Booking cancelled and seats released.' };
   }
 
-  // --- Cancel booking by admin (webhook refund) ---
+  // --- Issue a full Stripe refund for a paid booking ---
+  // The payment is a destination charge (see createBookingWithCheckout), so the refund
+  // also takes the partner's transfer back and returns the platform's application fee —
+  // otherwise the platform would be paying refunds out of its own balance.
+  private async refundBookingPayment(bookingId: number): Promise<void> {
+    const payment = await this.prisma.payment.findFirst({
+      where: { bookingId },
+      orderBy: { createdAt: 'desc' },
+      select: { stripeSessionId: true },
+    });
+
+    if (!payment?.stripeSessionId) {
+      throw new BadRequestException(
+        'No Stripe payment was found for this booking, so it cannot be refunded automatically. Please contact support.',
+      );
+    }
+
+    try {
+      const session = await this.stripe.checkout.sessions.retrieve(
+        payment.stripeSessionId,
+      );
+      const paymentIntentId =
+        typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id;
+      if (!paymentIntentId) {
+        throw new Error('Checkout session has no payment intent');
+      }
+
+      // No explicit idempotency key on purpose: Stripe replays the result of a keyed
+      // request for 24h, including failures, which would make a transient error
+      // un-retryable. A double click is already safe — a second full refund of the same
+      // charge is rejected by Stripe with `charge_already_refunded`, handled below.
+      await this.stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        refund_application_fee: true,
+        reverse_transfer: true,
+      });
+    } catch (error) {
+      if (error?.code === 'charge_already_refunded') {
+        // E.g. refunded manually from the Stripe dashboard first — the goal (money
+        // returned) is already achieved, so carry on and cancel the booking.
+        this.logger.warn(
+          `Booking ${bookingId}: charge was already refunded in Stripe; continuing with cancellation.`,
+        );
+        return;
+      }
+      this.logger.error(
+        `Refund failed for booking ${bookingId}: ${error.message}`,
+      );
+      throw new BadGatewayException(
+        'We could not process the refund right now. Your booking was not cancelled — please try again shortly.',
+      );
+    }
+  }
+
+  // --- Apply a full Stripe refund to a booking (called by the `charge.refunded` webhook) ---
+  // Kept under its original name so the webhook controller needs no change.
   async cancelBookingByAdmin(bookingId: number) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: { tourSchedule: true },
     });
-    if (!booking) throw new NotFoundException('Booking not found.');
-    if (
-      booking.status === BookingStatus.CANCELLED ||
-      booking.status === BookingStatus.EXPIRED
-    ) {
+    if (!booking) {
+      // Stripe retrying can't make a missing booking appear, so answer the webhook
+      // normally instead of throwing (which would just cause endless retries).
       this.logger.warn(
-        `Booking ${bookingId} already ${booking.status}, skipping.`,
+        `Refund event for unknown booking ${bookingId} — nothing to update.`,
       );
       return;
     }
+
+    // BUG-9 FIX (corrected): the money has ALREADY been returned in Stripe by the time
+    // this runs, so the payment record must say REFUNDED whatever state the booking is
+    // in. The first attempt returned early for terminal bookings *before* touching the
+    // payment, leaving a refunded COMPLETED booking showing SUCCEEDED forever.
+    await this.paymentsService.updatePaymentStatus(
+      bookingId,
+      PaymentStatus.REFUNDED,
+    );
+
+    // Terminal bookings keep their status (and their seats stay as they are): a late
+    // refund webhook must never revert a COMPLETED or NO_SHOW booking back to CANCELLED.
+    const terminalStatuses: BookingStatus[] = [
+      BookingStatus.CANCELLED,
+      BookingStatus.EXPIRED,
+      BookingStatus.COMPLETED,
+      BookingStatus.NO_SHOW,
+    ];
+    if (terminalStatuses.includes(booking.status as BookingStatus)) {
+      this.logger.warn(
+        `Booking ${bookingId} already in terminal state ${booking.status}; payment marked REFUNDED, booking left unchanged.`,
+      );
+      return;
+    }
+
     if (!booking.tourSchedule)
       throw new BadRequestException('Tour schedule not found.');
+
     await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
+      const result = await tx.booking.updateMany({
+        where: { id: bookingId, status: booking.status },
         data: { status: BookingStatus.CANCELLED },
       });
+      if (result.count === 0) {
+        // Changed under us. Throwing makes the webhook answer 500, Stripe retries, and
+        // the retry sees the booking's new state.
+        throw new ConflictException(
+          `Booking ${bookingId} changed state during refund handling.`,
+        );
+      }
+
       await tx.tourSchedule.update({
         where: { id: booking.tourSchedule!.id },
         data: { seatsAvailable: { increment: booking.seatsBooked ?? 0 } },
       });
     });
 
-    // ✅ Update payment status to FAILED
-    await this.paymentsService.updatePaymentStatus(
-      bookingId,
-      PaymentStatus.FAILED,
-    );
-
     this.logger.log(
-      `🔄 Booking ${bookingId} cancelled due to refund, payment marked FAILED.`,
+      `🔄 Booking ${bookingId} cancelled (full refund event), seats released, payment marked REFUNDED.`,
     );
   }
 
