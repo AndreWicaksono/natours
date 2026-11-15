@@ -584,6 +584,7 @@ model Payment {
 model StripeWebhookEvent {
   eventId     String    @id @map("event_id")
   processedAt DateTime? @default(now()) @map("processed_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
 
   @@map("stripe_webhook_events")
   @@schema("billing")
@@ -768,7 +769,6 @@ model Review {
   user       User?     @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tour       Tour?     @relation(fields: [tourId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([tourId, customerId])
   @@index([customerId])
   @@index([tourId])
   @@map("reviews")
@@ -961,6 +961,7 @@ enum TransferStatus {
   PENDING
   SUCCEEDED
   FAILED
+  REVERSED
 
   @@schema("billing")
 }

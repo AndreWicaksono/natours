@@ -49,10 +49,15 @@ export class ExpirationService {
 
       await this.prisma.$transaction(async (tx) => {
         for (const booking of expired) {
-          await tx.booking.update({
-            where: { id: booking.id },
+          // Conditional on PENDING: the list above was read outside this transaction, so a
+          // booking may have been confirmed by a payment webhook (or cancelled) since. An
+          // unconditional `update` would turn a paid booking into EXPIRED and release its
+          // seats. `count === 0` means "no longer pending — leave it alone".
+          const result = await tx.booking.updateMany({
+            where: { id: booking.id, status: BookingStatus.PENDING },
             data: { status: BookingStatus.EXPIRED },
           });
+          if (result.count === 0) continue;
 
           if (booking.tourSchedule && booking.seatsBooked) {
             await tx.tourSchedule.update({

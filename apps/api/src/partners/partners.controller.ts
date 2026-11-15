@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Query,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PartnersConnectService } from './partners-connect.service';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -26,12 +27,39 @@ export class PartnersController {
     private readonly prisma: PrismaService,
   ) {}
 
+  // Partner isolation. @Roles(ADMIN, PARTNER_ADMIN) only says WHICH ROLES may call these
+  // routes — it says nothing about WHICH partner. Without this check, any PARTNER_ADMIN
+  // could start Stripe onboarding for, or read the Connect status of, any other partner
+  // just by changing the id in the URL.
+  //
+  // Called before any database lookup on purpose: a partner admin probing someone else's
+  // id (or a nonexistent one) gets the same 403, so ids can't be enumerated through
+  // 404-vs-403 differences.
+  private assertCanManagePartner(user: UserPayload, partnerId: number) {
+    if (user.role === AppRole.ADMIN) return; // platform admins may manage any partner
+
+    // `UserPayload.partnerId` is declared `number | null`, but it comes straight from
+    // Prisma's BigInt column, so at runtime it is a `bigint` (2n). `partnerId` here is a
+    // `number` (2) produced by ParseIntPipe. In JavaScript `2n !== 2` is ALWAYS true —
+    // strict comparison never crosses types — so comparing them directly rejected every
+    // partner admin, including the owner of the partner. BigInt() accepts either type, so
+    // converting both sides compares values whatever the runtime type turns out to be.
+    if (
+      user.partnerId == null ||
+      BigInt(user.partnerId) !== BigInt(partnerId)
+    ) {
+      throw new ForbiddenException('You do not have access to this partner.');
+    }
+  }
+
   @Post(':id/onboarding')
   @Roles(AppRole.ADMIN, AppRole.PARTNER_ADMIN)
   async startOnboarding(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: UserPayload,
   ) {
+    this.assertCanManagePartner(user, id);
+
     const partner = await this.prisma.partner.findUnique({
       where: { id },
       select: { contactEmail: true },
@@ -69,7 +97,12 @@ export class PartnersController {
 
   @Get(':id/connect-status')
   @Roles(AppRole.ADMIN, AppRole.PARTNER_ADMIN)
-  async getConnectStatus(@Param('id', ParseIntPipe) id: number) {
+  async getConnectStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: UserPayload,
+  ) {
+    this.assertCanManagePartner(user, id);
+
     // ✅ Select the new fields
     const partner = await this.prisma.partner.findUnique({
       where: { id },

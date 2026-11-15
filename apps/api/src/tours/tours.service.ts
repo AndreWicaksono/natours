@@ -118,13 +118,26 @@ export class ToursService {
 
   /**
    * Get a single tour by ID.
-   * - Partner isolation applies (except for admin)
+   *
+   * What comes back depends on the caller's role:
+   *  - ADMIN / PARTNER_ADMIN: the full partner record and the tour's creator, for management screens
+   *  - everyone else (customers, guides): only `partner.{ id, name }` and no creator
+   *  - flagged (moderated) reviews are hidden from everyone except ADMIN
+   * Reviewer emails are never returned. Each review carries the reviewer's first name and
+   * avatar (from `profiles`) instead — enough to render "Anna ★★★★★" without exposing contact
+   * details of every customer who ever reviewed the tour.
    */
   async findOne(user: UserPayload, id: number) {
+    const canManage =
+      user.role === AppRole.ADMIN || user.role === AppRole.PARTNER_ADMIN;
+    const seesFlaggedReviews = user.role === AppRole.ADMIN;
+
     const tour = await this.prisma.tour.findFirst({
       where: { id, isDeleted: false },
       include: {
-        partner: true,
+        // `partner: true` used to be returned to everyone, including the partner's Stripe
+        // account id and contact email — to every customer who opened a tour page.
+        partner: canManage ? true : { select: { id: true, name: true } },
         tourMedia: true,
         tourSchedules: {
           include: {
@@ -135,24 +148,23 @@ export class ToursService {
           },
         },
         reviews: {
+          // `is_flagged` is nullable, so "not flagged" must accept NULL as well as false.
+          where: seesFlaggedReviews
+            ? undefined
+            : { OR: [{ isFlagged: false }, { isFlagged: null }] },
           select: {
             id: true,
             rating: true,
             reviewText: true,
-            user: {
-              select: {
-                id: true,
-                email: true,
-              },
-            },
+            createdAt: true,
+            customerId: true, // only used below to look up the reviewer; stripped before returning
+            ...(seesFlaggedReviews ? { isFlagged: true } : {}),
           },
+          orderBy: { createdAt: 'desc' },
         },
-        createdByUser: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
+        createdByUser: canManage
+          ? { select: { id: true, email: true } }
+          : false,
       },
     });
 
@@ -183,7 +195,36 @@ export class ToursService {
       }
     }
 
-    return tour;
+    // Attach each reviewer's public identity. `reviews.customerId` points at auth.users (which
+    // holds the email), not at `profiles`, so the names come from one extra query for all
+    // reviewers at once rather than one per review.
+    const reviewerIds = [
+      ...new Set(
+        tour.reviews
+          .map((review) => review.customerId)
+          .filter((customerId): customerId is string => !!customerId),
+      ),
+    ];
+    const profiles = reviewerIds.length
+      ? await this.prisma.profile.findMany({
+          where: { id: { in: reviewerIds } },
+          select: { id: true, firstName: true, avatarUrl: true },
+        })
+      : [];
+    const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
+
+    const reviews = tour.reviews.map(({ customerId, ...review }) => {
+      const profile = customerId ? profileById.get(customerId) : undefined;
+      return {
+        ...review,
+        reviewer: {
+          firstName: profile?.firstName ?? null,
+          avatarUrl: profile?.avatarUrl ?? null,
+        },
+      };
+    });
+
+    return { ...tour, reviews };
   }
 
   /**

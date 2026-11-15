@@ -6,8 +6,16 @@ import { BookingsService } from '../../bookings/bookings.service';
 import { PaymentsService } from '../payments.service';
 import { Public } from '../../auth/public.decorator';
 import { Prisma } from 'src/generated/prisma/client';
-import { PaymentStatus, TransferStatus } from 'src/generated/prisma/enums';
+import {
+  BookingStatus,
+  PaymentStatus,
+  TransferStatus,
+} from 'src/generated/prisma/enums';
 import { PrismaService } from 'src/prisma/prisma.service';
+
+// A claim that was never completed or released (e.g. the process crashed mid-event) is taken
+// over by the next delivery once it is older than this.
+const STALE_CLAIM_MS = 5 * 60 * 1000;
 
 @Controller('webhooks/stripe')
 export class StripeWebhookController {
@@ -58,15 +66,19 @@ export class StripeWebhookController {
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // BP-2 FIX: Idempotency via the `stripe_webhook_events` table, so a redelivered
-    // event is never processed twice.
+    // BP-2 FIX: Idempotency via the `stripe_webhook_events` table, so a redelivered event is
+    // never processed twice.
     //
-    // Claim the event with a single INSERT (the primary key makes it atomic — two
-    // concurrent deliveries can't both succeed, unlike findUnique-then-create). The claim
-    // is RELEASED if processing fails (see the catch block below): we answer 500 so
-    // Stripe retries, and that retry must be allowed to reprocess the event. Recording
-    // the event without releasing it on failure would turn every transient error into a
-    // permanently lost event — e.g. a paid booking that never gets confirmed.
+    // Each event moves through three states:
+    //   claimed    → row inserted, `completedAt` NULL   (some request is processing it)
+    //   completed  → `completedAt` set                  (done; later deliveries get 200)
+    //   released   → row deleted after a failure        (Stripe's retry processes it again)
+    //
+    // The claim is a single INSERT (the primary key makes it atomic — two concurrent
+    // deliveries can't both succeed). A delivery that finds a claim still IN PROGRESS gets
+    // 409, NOT 200: answering 200 would tell Stripe the event is handled, and if the first
+    // attempt then failed, the event would be lost for good. A claim that has been stuck for
+    // longer than STALE_CLAIM_MS (crashed process) is taken over by the next delivery.
     let claimed = false;
     try {
       await this.prisma.stripeWebhookEvent.create({
@@ -78,12 +90,43 @@ export class StripeWebhookController {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        this.logger.debug(`Webhook event ${event.id} already processed. Skipping.`);
-        return res.status(200).json({ received: true });
+        const existing = await this.prisma.stripeWebhookEvent.findUnique({
+          where: { eventId: event.id },
+        });
+
+        if (existing?.completedAt) {
+          this.logger.debug(
+            `Webhook event ${event.id} already processed. Skipping.`,
+          );
+          return res.status(200).json({ received: true });
+        }
+
+        // Not completed: either another request is processing it right now, its claim was
+        // just released after a failure, or it is stale. Only a stale claim may be taken over.
+        const takeover = await this.prisma.stripeWebhookEvent.updateMany({
+          where: {
+            eventId: event.id,
+            completedAt: null,
+            processedAt: { lt: new Date(Date.now() - STALE_CLAIM_MS) },
+          },
+          data: { processedAt: new Date() },
+        });
+        if (takeover.count === 1) {
+          claimed = true;
+          this.logger.warn(
+            `Took over stale claim for webhook event ${event.id}.`,
+          );
+        } else {
+          this.logger.debug(
+            `Webhook event ${event.id} is being processed by another request — asking Stripe to retry.`,
+          );
+          return res.status(409).json({ error: 'Event is being processed' });
+        }
+      } else {
+        // Unexpected DB error: bookkeeping must not block payment processing. The handlers
+        // below are written to be safe to run again if Stripe redelivers.
+        this.logger.error(`Failed to record webhook idempotency: ${err.message}`);
       }
-      // Unexpected DB error: bookkeeping must not block payment processing. The
-      // handlers below are written to be safe to run again if Stripe redelivers.
-      this.logger.error(`Failed to record webhook idempotency: ${err.message}`);
     }
 
     this.logger.log(`📨 Processing Stripe event: ${event.type} (${event.id})`);
@@ -96,7 +139,43 @@ export class StripeWebhookController {
           const partnerId = parseInt(session.metadata?.partner_id ?? '');
 
           if (!isNaN(bookingId) && !isNaN(partnerId)) {
-            await this.bookingsService.confirmBooking(bookingId);
+            const bookingStatus =
+              await this.bookingsService.confirmBooking(bookingId);
+
+            // The customer PAID, but the booking can no longer be confirmed: it expired or
+            // was cancelled while they were completing payment (its seats may already be
+            // gone). Refund in full automatically instead of keeping the money and
+            // recording a transfer for a booking that doesn't exist. Only EXPIRED/CANCELLED
+            // mean this — CONFIRMED (or later) simply means an earlier delivery of this same
+            // event already confirmed it, and processing continues normally below.
+            if (
+              bookingStatus === BookingStatus.EXPIRED ||
+              bookingStatus === BookingStatus.CANCELLED
+            ) {
+              const lateIntentId =
+                typeof session.payment_intent === 'string'
+                  ? session.payment_intent
+                  : session.payment_intent?.id;
+              if (!lateIntentId) {
+                // Throwing → 500 → Stripe retries; surfaces in logs so it's never silent.
+                throw new Error(
+                  `Paid session ${session.id} has no payment intent; cannot auto-refund booking ${bookingId}`,
+                );
+              }
+              await this.bookingsService.refundPaymentIntent(
+                lateIntentId,
+                `late payment for ${bookingStatus} booking ${bookingId}`,
+              );
+              await this.paymentsService.updatePaymentStatus(
+                bookingId,
+                PaymentStatus.REFUNDED,
+              );
+              this.logger.warn(
+                `💸 Booking ${bookingId} was ${bookingStatus} when its payment arrived — payment refunded automatically.`,
+              );
+              break;
+            }
+
             await this.paymentsService.updatePaymentStatus(
               bookingId,
               PaymentStatus.SUCCEEDED,
@@ -151,7 +230,9 @@ export class StripeWebhookController {
           const session = event.data.object as Stripe.Checkout.Session;
           const bookingId = parseInt(session.metadata?.booking_id ?? '');
           if (!isNaN(bookingId)) {
-            await this.bookingsService.expireBooking(bookingId);
+            // Pass the session id so an event about a REPLACED session (see
+            // BookingsService.resumePayment) can't expire the live booking.
+            await this.bookingsService.expireBooking(bookingId, session.id);
             this.logger.log(`⏰ Booking ${bookingId} expired from Stripe session.`);
           }
           break;
@@ -254,6 +335,21 @@ export class StripeWebhookController {
       }
 
       return res.status(500).json({ error: 'Webhook handler failed' });
+    }
+
+    // Mark the event done. If this fails the claim simply goes stale and a redelivery
+    // reprocesses the event, which the handlers tolerate — so log it, don't fail the webhook.
+    if (claimed) {
+      await this.prisma.stripeWebhookEvent
+        .update({
+          where: { eventId: event.id },
+          data: { completedAt: new Date() },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Could not mark webhook event ${event.id} completed: ${err.message}`,
+          ),
+        );
     }
 
     return res.status(200).json({ received: true });

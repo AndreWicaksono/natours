@@ -62,9 +62,9 @@ This model keeps the platform aligned with partner success — when partners ear
 ```mermaid
 graph TD
 A[Customer browses tours] --> B[Customer selects a tour & date]
-B --> C[Customer books & pays via Stripe]
-C --> D[Platform confirms booking]
-D --> E[Seats are reserved]
+B --> C[Customer books, seats are held for the payment window]
+C --> D[Customer pays via Stripe]
+D --> E[Platform confirms booking]
 E --> F[Stripe splits payment]
 F --> G[Partner receives net amount]
 G --> H[Partner's dashboard updates]
@@ -73,8 +73,10 @@ I --> J[Customer checks in on tour start date]
 J --> K[Tour status becomes ONGOING]
 K --> L[Tour ends → status becomes COMPLETED]
 L --> M[Customer can leave a review]
-D --> N[No check-in after start date]
+E --> N[No check-in after start date]
 N --> O[Status becomes NO_SHOW]
+C --> P[Payment window ends unpaid → EXPIRED, seats released]
+E --> Q[Cancelled before the tour starts → refund, CANCELLED, seats released]
 ```
 
 ### Detailed Flow
@@ -84,14 +86,25 @@ N --> O[Status becomes NO_SHOW]
 | 1    | Partner  | Creates a tour with availability rules                                | Tour is published and visible to customers                       |
 | 2    | Partner  | Completes Stripe Connect onboarding                                   | Partner can now receive payouts                                  |
 | 3    | Customer | Browses tours and selects a date/time                                 | Availability endpoint validates rules & exceptions               |
-| 4    | Customer | Books the tour and pays                                               | Booking is created (status: `PENDING`), Stripe session generated |
-| 5    | Customer | Completes payment on Stripe                                           | Webhook confirms payment, booking becomes `CONFIRMED`            |
+| 4    | Customer | Books the tour and pays | Booking is created (status: `PENDING`), the seats are claimed atomically and held for the payment window (about 31 minutes), and a Stripe Checkout Session that expires at the same instant is generated |
+| 5    | Customer | Completes payment on Stripe | Webhook confirms payment, booking becomes `CONFIRMED`. A payment that arrives after the booking expired or was cancelled is refunded automatically instead |
 | 6    | Platform | Calculates commission and splits payment                              | `PlatformTransfer` record created                                |
 | 7    | Customer | Checks in on the tour start date (via `PATCH /bookings/:id/check-in`) | Booking becomes `ONGOING`                                        |
 | 8    | System   | Auto-transition via cron job after tour ends                          | `ONGOING` → `COMPLETED`                                          |
 | 9    | System   | Auto-transition via cron job if no check-in after start date          | `CONFIRMED` → `NO_SHOW`                                          |
-| 10   | Customer | Leaves a review for the completed tour                                | Review is stored and average rating updated                      |
+| 10   | Customer | Leaves a review for the completed tour (one review per booking) | Review is stored |
 | 11   | Partner  | Views earnings and transfers in dashboard                             | Partner can see all transactions and feedback                    |
+
+### Payment Window, Cancellation and Refunds
+
+| Situation | What happens |
+| :-------- | :----------- |
+| The customer does not pay within the payment window (about 31 minutes) | Stripe expires the Checkout Session, and its `checkout.session.expired` event expires the booking (`EXPIRED`), releases its seats and marks the payment `FAILED`. The expiration cron (every 15 minutes) is only a fallback. |
+| An unpaid booking (`PENDING`) is cancelled | The booking becomes `CANCELLED`, its seats are released, its open Checkout Session is closed so it can no longer be paid, and the payment is marked `FAILED`. |
+| A paid booking (`CONFIRMED`) is cancelled before the tour starts | A full refund is issued first (the partner's transfer is reversed and the platform fee returned). Only then is the booking `CANCELLED`, the seats released, the payment marked `REFUNDED` and the `PlatformTransfer` marked `REVERSED`. If the refund fails, nothing changes and the request can be retried. |
+| The customer pays after the booking expired or was cancelled | The payment is refunded in full automatically. The booking stays as it was and no `PlatformTransfer` is created. |
+| The customer resumes payment (`POST /bookings/:id/resume-payment`) | A new Checkout Session is created and saved first, and only then is the old one closed, so the customer can never pay twice. The seat hold moves to the new session's expiry. Allowed only while the booking is under 2 hours old. |
+| Cancelling an `ONGOING`, `COMPLETED`, `NO_SHOW`, `CANCELLED` or `EXPIRED` booking, or a paid booking after the tour started | Rejected with a 400. |
 
 ---
 
@@ -111,6 +124,18 @@ ONGOING                                 NO_SHOW
    ▼
 COMPLETED
 ```
+
+The diagram above is the successful path. Two more transitions leave `PENDING` and `CONFIRMED`:
+
+```text
+PENDING   ──(payment window ends unpaid)──────────────────► EXPIRED
+PENDING   ──(cancelled before payment)────────────────────► CANCELLED
+CONFIRMED ──(cancelled before the tour starts, refunded)──► CANCELLED
+```
+
+- `EXPIRED`, `CANCELLED`, `COMPLETED` and `NO_SHOW` are **final**. Nothing that arrives later (a late refund event, a late payment, a second cancel) changes them.
+- Every transition is a conditional update that names the status it expects, so two events racing for the same booking cannot overwrite each other.
+- Seats are held from `PENDING` onwards and released on `EXPIRED` and `CANCELLED`.
 
 ## 🏗️ Architecture
 
@@ -165,6 +190,10 @@ natours/
 | **RLS Bypass**                               | NestJS uses `service_role` key, bypassing RLS — all authorization logic is in the application layer.                                                                                    |
 | **On-demand Tour Schedules**                 | `tour_schedules` are created only when the first booking is made, avoiding database bloat.                                                                                              |
 | **Check-in for attendance tracking**         | `CONFIRMED` → `ONGOING` requires manual check-in; auto `NO_SHOW` if no check-in after start date. Provides accurate attendance data and enables post-tour actions (reviews, analytics). |
+| **One expiry for the seat hold and the Checkout Session** | Stripe sessions live at least 30 minutes, so the old 15-minute hold left a window where a payment could arrive after the seats were released. Both now expire at the same instant (31 minutes); Stripe's own expiry event is the normal way seats are released and the cron is a fallback. |
+| **Refund instead of re-confirming a late payment** | A payment for an expired or cancelled booking is refunded in full automatically. Re-confirming only when seats happen to be free would need much more logic; a refund is always correct. |
+| **Conditional updates for state changes** | Booking status and seat counts change with one conditional `UPDATE` (for example `seats_available >= n`), never read-then-write, so concurrent requests cannot oversell a tour or overwrite each other. |
+| **Responses shaped by role** | Endpoints used by both customers and staff return only what the caller's role needs. For example, a customer never receives a partner's Stripe account data or a reviewer's email. |
 
 ---
 
@@ -382,7 +411,7 @@ echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null; echo   # pay
 ```ts
 app.useGlobalGuards(new JwtAuthGuard(reflector));
 ```
-This means **every route in the entire app already requires a valid JWT by default** — you do not need to add `JwtAuthGuard` again on a new controller. (`ToursController` and `ReviewsController` both currently do add it again via `@UseGuards(JwtAuthGuard, RolesGuard)` — harmless, since it just runs the same deterministic check twice, but redundant. Worth cleaning up to `@UseGuards(RolesGuard)` only, next time either file is touched, so new controllers copy the correct pattern rather than the redundant one.)
+This means **every route in the entire app already requires a valid JWT by default** — you do not need to add `JwtAuthGuard` again on a new controller. (Earlier versions of `ToursController`, `ReviewsController` and the other feature controllers added it again via `@UseGuards(JwtAuthGuard, RolesGuard)`. That was harmless but redundant, and it has been cleaned up to `@UseGuards(RolesGuard)` only, so copy that pattern.)
 
 Given that, here's the actual decision tree for a new controller or route:
 
@@ -455,6 +484,8 @@ Natours uses **Stripe Connect Express accounts** to enable seamless payments bet
 4. **Partner completes onboarding** → Stripe handles KYC + bank account collection
 5. **Webhook updates status** → `account.updated` event sets `stripe_onboarding_status = 'active'`
 
+> **Who may call these routes**: `POST /partners/:id/onboarding` and `GET /partners/:id/connect-status` are limited to an `ADMIN` or to the `PARTNER_ADMIN` of **that same partner**. The ownership check runs before the database lookup, so another partner's id and a nonexistent id both return 403.
+
 ### Payment Splitting Flow
 
 1. **Customer books a tour** → Booking is created (`PENDING`)
@@ -462,13 +493,25 @@ Natours uses **Stripe Connect Express accounts** to enable seamless payments bet
    - `application_fee_amount` → platform commission (e.g., 10%)
    - `transfer_data.destination` → partner's Stripe Connect account
    - `transfer_group: booking_${id}` → links transfer to booking
+   - `expires_at` → the session expires at the same instant as the seat hold (31 minutes)
 3. **Customer pays** → Stripe processes payment
 4. **Webhook `checkout.session.completed`**:
-   - Confirms booking (`status = CONFIRMED`)
+   - Confirms booking (`status = CONFIRMED`), but only if it is still `PENDING`
    - Updates payment (`status = SUCCEEDED`)
    - Creates `PlatformTransfer` record (gross, fee, net)
+   - If the booking is already `EXPIRED` or `CANCELLED`, the payment is **refunded in full instead**: the payment is marked `REFUNDED` and no `PlatformTransfer` is created
 5. **Webhook `transfer.created`**:
    - Updates `stripe_transfer_id` from `'pending'` to the actual transfer ID
+6. **Webhook `checkout.session.expired`**:
+   - Expires the booking (`EXPIRED`), releases its seats and marks the payment `FAILED`, but only if the booking is still `PENDING` and the expired session is the booking's **current** one (a session replaced by a resumed payment is ignored)
+7. **Refunds** (cancelling a paid booking, or a late payment):
+   - The Refunds API is called with `reverse_transfer` and `refund_application_fee`, so the partner's transfer is taken back and the platform fee returned
+   - The `charge.refunded` webhook (full refunds only) marks the payment `REFUNDED` and the `PlatformTransfer` `REVERSED`, and never changes a booking that is already final
+8. **Webhook idempotency**: every event is claimed in `stripe_webhook_events` before it is processed.
+   - Already completed → answered `200` without processing
+   - Still being processed by another request → answered `409`, so Stripe retries later
+   - Processing failed → the claim is released and Stripe's retry processes the event again
+   - A claim stuck for more than 5 minutes is taken over by the next delivery
 
 ### Database Tracking
 
@@ -480,7 +523,7 @@ The `billing.platform_transfers` table tracks every financial transaction:
 | `platform_fee`       | Commission earned by the platform       |
 | `net_amount`         | Amount transferred to the partner       |
 | `stripe_transfer_id` | Stripe transfer ID (for reconciliation) |
-| `status`             | `PENDING` / `SUCCEEDED` / `FAILED`      |
+| `status`             | `PENDING` / `SUCCEEDED` / `FAILED` / `REVERSED` (the money was taken back from the partner after a refund) |
 
 ---
 
@@ -496,11 +539,11 @@ The `billing.platform_transfers` table tracks every financial transaction:
 | `tour`    | `availability_exceptions` | Blackout dates (overrides rules)                                                                                      |
 | `tour`    | `tour_schedules`          | Created on-demand (seats available per departure)                                                                     |
 | `tour`    | `bookings`                | Customer reservations with status (`PENDING`, `CONFIRMED`, `ONGOING`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `NO_SHOW`) |
-| `tour`    | `reviews`                 | Customer reviews and ratings                                                                                          |
+| `tour`    | `reviews`                 | Customer reviews and ratings, one per booking (`booking_id` is unique) |
 | `account` | `profiles`                | User profiles with roles (`CUSTOMER`, `GUIDE`, `PARTNER_ADMIN`, `ADMIN`)                                              |
 | `billing` | `payments`                | Payment records (Stripe session ID, status)                                                                           |
 | `billing` | `platform_transfers`      | Financial tracking for Stripe Connect splits                                                                          |
-| `billing` | `stripe_webhook_events`   | Idempotency tracking for webhooks                                                                                     |
+| `billing` | `stripe_webhook_events`   | Idempotency tracking for webhooks: one row per event, `completed_at` is set once it is fully processed |
 
 ### Enums
 
@@ -510,7 +553,8 @@ The `billing.platform_transfers` table tracks every financial transaction:
 | `booking_status`  | `PENDING`, `CONFIRMED`, `ONGOING`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `NO_SHOW` |
 | `tour_difficulty` | `EASY`, `MEDIUM`, `DIFFICULT`                                                     |
 | `tour_status`     | `COMING_SOON`, `DRAFT`, `LIVE`                                                    |
-| `TransferStatus`  | `PENDING`, `SUCCEEDED`, `FAILED`                                                  |
+| `payment_status`  | `PENDING`, `SUCCEEDED`, `FAILED`, `REFUNDED` |
+| `TransferStatus`  | `PENDING`, `SUCCEEDED`, `FAILED`, `REVERSED` |
 
 ---
 
@@ -1105,6 +1149,7 @@ For the moderation-flag example, `tour.reviews` needs a new column, so update `s
 ```prisma
 model Review {
   id         BigInt    @id @default(autoincrement())
+  bookingId  BigInt    @unique @map("booking_id")   // one review per booking
   reviewText String?   @map("review_text")
   rating     Int?
   tourId     BigInt?   @map("tour_id")
@@ -1158,9 +1203,19 @@ export class CreateReviewDto {
 }
 ```
 
+Simplified from the real `reviews.service.ts`. A review belongs to a **booking**, not to a customer and a tour, so "one review per booking" is enforced by `bookingId @unique` and a customer who books the same tour twice can review both visits.
+
 ```ts
 // src/modules/reviews/reviews.service.ts
-import { ConflictException, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { Prisma } from "../../generated/prisma/client";
+import { BookingStatus } from "../../generated/prisma/enums";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 
@@ -1168,37 +1223,69 @@ import { CreateReviewDto } from "./dto/create-review.dto";
 export class ReviewsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(tourId: bigint, customerId: string, dto: CreateReviewDto) {
-    const existing = await this.prisma.review.findUnique({
-      where: { tourId_customerId: { tourId, customerId } },
+  async create(bookingId: bigint, user: { id: string }, dto: CreateReviewDto) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { tourSchedule: { select: { tourId: true } } },
     });
-    if (existing) {
-      throw new ConflictException("You already reviewed this tour");
+
+    // Existence first, then ownership, then state (see "Design Lessons" below)
+    if (!booking) throw new NotFoundException("Booking not found");
+    if (booking.customerId !== user.id) {
+      throw new ForbiddenException("This booking does not belong to you");
+    }
+    if (booking.status !== BookingStatus.COMPLETED) {
+      throw new BadRequestException("You can only review completed bookings");
+    }
+    if (!booking.tourSchedule) {
+      throw new BadRequestException("This booking has no associated tour schedule");
     }
 
-    return this.prisma.review.create({ data: { tourId, customerId, ...dto } });
+    try {
+      return await this.prisma.review.create({
+        data: {
+          bookingId,
+          tourId: booking.tourSchedule.tourId, // derived from the booking, never from client input
+          customerId: user.id,
+          ...dto,
+        },
+      });
+    } catch (error) {
+      // bookingId is @unique, so the database is what really enforces one review per booking
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ConflictException("You already reviewed this booking");
+      }
+      throw error;
+    }
   }
 }
 ```
 
 ```ts
 // src/modules/reviews/reviews.controller.ts
-import { Body, Controller, Param, Post } from "@nestjs/common";
-import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { Body, Controller, Param, Post, UseGuards } from "@nestjs/common";
+import { CurrentUser } from "../../auth/current-user.decorator";
+import { Roles } from "../../auth/roles.decorator";
+import { RolesGuard } from "../../auth/roles.guard";
+import type { UserPayload } from "../../auth/user-payload.interface";
+import { AppRole } from "../../generated/prisma/enums";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { ReviewsService } from "./reviews.service";
 
-@Controller("tours/:tourId/reviews")
+@Controller("bookings/:bookingId/reviews")
+@UseGuards(RolesGuard)
 export class ReviewsController {
   constructor(private reviewsService: ReviewsService) {}
 
   @Post()
+  @Roles(AppRole.CUSTOMER)
   create(
-    @Param("tourId") tourId: string,
-    @CurrentUser() user: { id: string },
+    @Param("bookingId") bookingId: string,
+    @CurrentUser() user: UserPayload,
     @Body() dto: CreateReviewDto,
   ) {
-    return this.reviewsService.create(BigInt(tourId), user.id, dto);
+    // BigInt(...) throws on a non-numeric id: see the BigInt note under "Design Lessons"
+    return this.reviewsService.create(BigInt(bookingId), user, dto);
   }
 }
 ```
@@ -1206,7 +1293,7 @@ export class ReviewsController {
 ### 6. Test locally
 
 ```bash
-curl -X POST http://localhost:3000/tours/1/reviews \
+curl -X POST http://localhost:3000/bookings/<completed-booking-id>/reviews \
   -H "Authorization: Bearer <local-test-jwt>" \
   -H "Content-Type: application/json" \
   -d '{"reviewText": "Amazing experience!", "rating": 5}'
@@ -1246,7 +1333,7 @@ Then deploy the application code itself — see "Deployment" below. The deployed
 
 ## 🧱 Service, Controller, and Module Design Lessons
 
-General patterns worth following in every service/controller going forward, surfaced while building the Reviews module (`apps/api/src/reviews/`) — worth reading once, then treating as a checklist for the next feature.
+General patterns worth following in every service/controller going forward, surfaced while building the Reviews module (`apps/api/src/reviews/`) — worth reading once, then treating as a checklist for the next feature. The last four lessons come from the 23-10-2026 audit.
 
 ### Order your validation checks deliberately, not just "does it work"
 
@@ -1320,6 +1407,54 @@ try {
 }
 ```
 
+
+### Change state with one conditional update, not read-then-write
+
+Reading a value, deciding in code and writing later leaves a gap that another request can slip into. The seat count of a tour schedule was handled that way: two customers could both read `seatsAvailable = 1`, both pass the check, and both decrement, leaving `-1`. A transaction does not help, because it makes the *writes* atomic with each other but not the read that came before them. Put the condition in the `WHERE` of a single statement and use the returned `count` to learn whether you won:
+
+```ts
+const claimed = await tx.tourSchedule.updateMany({
+  where: { id: schedule.id, seatsAvailable: { gte: dto.seatsBooked } },
+  data: { seatsAvailable: { decrement: dto.seatsBooked } },
+});
+if (claimed.count === 0) {
+  throw new BadRequestException('Not enough seats available.');
+}
+```
+
+Status changes follow the same rule. `updateMany({ where: { id, status: BookingStatus.PENDING }, data: { status: BookingStatus.EXPIRED } })` can never overwrite a booking that a payment confirmed a moment earlier, because it only matches while the booking is still `PENDING`. Keep the earlier read as a friendly pre-check if you like; never rely on it for correctness.
+
+### Never compare a `bigint` with a `number`
+
+Prisma returns `BigInt` columns as `bigint` (`2n`), while a route parameter parsed by `ParseIntPipe` is a `number` (`2`). In JavaScript, strict comparison across those types is **always** unequal, so `user.partnerId !== partnerId` was true for everyone, and the first version of the partner ownership check rejected every partner admin, including the owner. TypeScript did not warn, because `UserPayload` declares `partnerId` as `number | null` while the runtime value is a `bigint`: a declared type can disagree with what actually arrives. Convert both sides before comparing:
+
+```ts
+if (user.partnerId == null || BigInt(user.partnerId) !== BigInt(partnerId)) {
+  throw new ForbiddenException('You do not have access to this partner.');
+}
+```
+
+Comparing two Prisma fields with each other (`bigint` against `bigint`) is fine. The risk appears when a value from Prisma meets one from a URL, a query string or a DTO. (`UserPayload` still declares the wrong type and should be corrected.)
+
+### Order side effects when an external system is involved
+
+When an operation changes your database *and* a system you do not control (Stripe), the order of the steps decides what a failure leaves behind. For every step, ask: *if the next one fails, is this state safe to leave?*
+
+| Situation | Order | Why |
+| :-------- | :---- | :-- |
+| The external step must succeed for the operation to be valid (refunding a paid booking that is being cancelled) | External call **first**, then update the database | If Stripe fails, nothing has changed and the customer can retry |
+| Replacing a resource (resuming a payment creates a new Checkout Session) | Create and **save the new one**, then close the old one | Closing the old session fires an event; if the old session is still recorded as current, that event expires the booking that was just resumed |
+| Closing something you no longer need (cancelling an unpaid booking) | Update **your own record first**, then close the external resource | If the close fails, or races with a payment, the booking is already `CANCELLED`, so the payment webhook knows to refund it |
+
+Add a safety net for the case the ordering cannot fully cover. Here, a payment that arrives for an expired or cancelled booking is refunded automatically.
+
+### Test the allowed case, and prove a test can fail
+
+Two habits that would have caught real bugs earlier:
+
+- **Every authorization test needs a control case: the actor who *should* succeed.** The 403 checks on the partner routes all passed while the check was broken and rejected everyone; only "own partner returns 200" failed. For each rule, test the allowed actor, a wrong actor, and a nonexistent resource (which should look the same as a foreign one).
+- **Run a test against the broken behavior once.** A concurrency test that has never failed may not be testing anything: if the two requests never overlap, the old code passes too. Remove the fix (for example, delete the `seatsAvailable: { gte: ... }` condition), confirm the test fails on every round, then restore it. The procedures for this are in `docs/audit-results-archive/api/23-10-2026/1/final-result/verification-procedures.md`.
+
 ---
 
 ## 🚨 Incident History
@@ -1355,36 +1490,54 @@ Also required: clearing a handful of orphaned rows in `billing.payments`/`billin
 
 ### Base URL
 
-- **Development**: `http://localhost:3000/api`
+- **Development**: `http://localhost:3000` (there is no `/api` prefix)
 - **Production**: _Not available yet_
 
 ### Key Endpoints
 
+Every route requires a valid JWT unless it is marked **public** (see "Authentication & Authorization"). Roles in parentheses restrict a route further. This list is the full API surface of `apps/api`; to check it against the code, run `grep -rn "@Controller" apps/api/src --include=*.ts | grep -v generated`.
+
+#### App
+
+- `GET /health` – Health check (**public**)
+- `GET /profile` – The authenticated user's own profile (any role)
+
 #### Tours
 
-- `GET /tours` – List all tours
-- `POST /tours` – Create a new tour (partner only)
-- `GET /tours/:id` – Get tour details
-- `PUT /tours/:id` – Update tour (partner only)
+- `GET /tours` – List tours (customers see only `LIVE` tours; partner roles see their own partner's tours; admins see all)
+- `POST /tours` – Create a tour (`ADMIN`, `PARTNER_ADMIN`)
+- `GET /tours/:id` – Get tour details. The response depends on the caller's role: customers and guides get only the partner's `id` and `name` and the unflagged reviews (each with `reviewer: { firstName, avatarUrl }`); admins and partner admins also get the full partner record and the creator, and only admins see flagged reviews
+- `PATCH /tours/:id` – Update a tour (`ADMIN`, or the `PARTNER_ADMIN` of the tour's partner)
+- `DELETE /tours/:id` – Soft-delete a tour (same roles)
+- `PATCH /tours/:id/restore` – Restore a soft-deleted tour (same roles)
+- `PATCH /tours/:id/status?status=` – Change a tour's status (same roles)
+- `GET /tours/:id/availability?month=&year=` – Bookable dates and times for a month (**public**)
 
 #### Bookings
 
-- `GET /bookings` – List user's bookings
-- `POST /bookings` – Create a new booking
+- `GET /bookings` – List the bookings visible to the caller
+- `POST /bookings` – Create a booking and its Stripe Checkout Session; returns `{ checkout_url }` (`CUSTOMER`, `ADMIN`, `PARTNER_ADMIN`)
 - `GET /bookings/:id` – Get booking details
-- `PATCH /bookings/:id/cancel` – Cancel a booking
-- `PATCH /bookings/:id/check-in` – Check in for a tour (customer only, requires `CONFIRMED` status)
+- `PATCH /bookings/:id/cancel` – Cancel a booking. Only `PENDING` bookings and `CONFIRMED` bookings whose tour has not started can be cancelled; a paid booking is refunded first
+- `POST /bookings/:id/resume-payment` – Restart payment for a `PENDING` booking (`CUSTOMER` only, while the booking is under 2 hours old)
+- `PATCH /bookings/:id/check-in` – Check in for a tour (`CUSTOMER`, `ADMIN`, `PARTNER_ADMIN`; requires `CONFIRMED` status)
+- `POST /bookings/test-expire` – Run the expiration job by hand (**public**, but only when `NODE_ENV=development`; otherwise it returns 404)
 
-#### Payments
+#### Reviews
 
-- `POST /payments/checkout` – Initiate payment
-- `GET /payments/:id` – Get payment status
+- `POST /bookings/:bookingId/reviews` – Review a `COMPLETED` booking (`CUSTOMER` only, one review per booking)
 
 #### Partners
 
-- `POST /partners/:id/onboarding` – Start Stripe onboarding
-- `GET /partners/:id/earnings` – View earnings summary
+- `POST /partners/:id/onboarding` – Start Stripe onboarding (an admin, or the `PARTNER_ADMIN` of that same partner)
+- `GET /partners/:id/connect-status` – Stripe onboarding status (same rule)
+- `GET /partners/onboarding/complete` and `GET /partners/onboarding/refresh` – Where Stripe redirects the partner after onboarding (**public**)
 
+#### Webhooks
+
+- `POST /webhooks/stripe` – Stripe events (**public**: authenticated by the Stripe signature, not by a JWT)
+
+There is no payments controller: payments are created and tracked by the booking and webhook flows (see "Payment Splitting Flow"). Endpoints for partner earnings and transaction history do not exist yet.
 ---
 
 ## 🧪 Testing
@@ -1411,14 +1564,23 @@ pnpm test:coverage
 
 - **JWT Tokens**: Issued by Supabase, validated by NestJS
 - **Role-Based Access Control (RBAC)**: Enforced at the endpoint level
+- **Resource ownership**: a role is not enough on its own. A `PARTNER_ADMIN` can act only on their own partner, a customer only on their own bookings, and staff and customers receive different views of the same tour
 - **Webhook Verification**: All Stripe webhooks are cryptographically signed
 
 ### Data Protection
 
-- **HTTPS Only**: All API calls use TLS 1.3
-- **Rate Limiting**: 100 requests per minute per IP
 - **SQL Injection Protection**: Prisma parameterized queries
-- **CORS**: Restricted to trusted domains
+- **Input validation**: a global `ValidationPipe` (`whitelist` and `forbidNonWhitelisted`) rejects unknown fields and invalid values before they reach a service
+- **Secrets**: kept in environment variables, not in the repository
+- **Webhook idempotency**: Stripe events are claimed in `stripe_webhook_events`, so a redelivered event is never processed twice
+
+### Not Yet Implemented
+
+These are **not** active today:
+
+- **HTTPS / TLS**: locally the API listens on plain HTTP. TLS is planned to be terminated by the hosting platform when the API is deployed
+- **CORS restrictions**: tracked in `docs/STATUS.md` (API Refinement & Integration)
+- **Rate limiting**: no request throttling is configured yet
 
 ---
 
@@ -1430,7 +1592,7 @@ The partner dashboard (available in the Internal Dashboard app) provides:
 - **Booking Overview** – Real-time booking status and customer details (including `ONGOING`, `COMPLETED`, and `NO_SHOW` statuses)
 - **Availability Management** – Set recurring rules and blackout dates
 - **Financial Insights** – Earnings, pending payouts, and transaction history
-- **Reviews & Ratings** – Customer feedback and average ratings
+- **Reviews & Ratings** – Customer feedback and ratings (an average-rating summary is planned)
 
 ---
 
@@ -1513,4 +1675,4 @@ _Software Engineer · Nix Enthusiast_
 
 ---
 
-**Last Updated**: October 4, 2026
+**Last Updated**: November 15, 2026

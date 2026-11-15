@@ -36,3 +36,6 @@ apps/api/src/generated/
 
 # Core dump files (if any)
 core.*
+
+# Testing scripts
+.script/
